@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 /// Runs a preset's steps in order, pausing mid-sequence to ask for the system
 /// Location (mirrors the firmware's preset runner).
