@@ -209,9 +209,9 @@ final class BLEManager: NSObject, ObservableObject {
             verifyingPassword = false
             expectedPassword = nil
             if stored == want {
-                info("✓ password verified — encoder stored it correctly")
+                info("OK - password verified, encoder stored it correctly")
             } else {
-                let msg = "⚠️ Password mismatch — you set \"\(want)\" but the encoder stored \"\(stored)\". It dropped a character; change the password again to be safe."
+                let msg = "WARNING - password mismatch: you set \"\(want)\" but the encoder stored \"\(stored)\". It dropped a character; change the password again to be safe."
                 info(msg)
                 passwordWarning = msg
                 Haptics.warning()
