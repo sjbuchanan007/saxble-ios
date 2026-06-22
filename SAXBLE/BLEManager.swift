@@ -49,7 +49,10 @@ final class BLEManager: NSObject, ObservableObject {
     // we resend the same value (slowly) when we see that prompt.
     private var pendingRetype: String?
 
-    private let slowQueue = DispatchQueue(label: "saxble.slowwrite")
+    // All writes funnel through this single serial queue so a paced
+    // (byte-by-byte) password can never interleave with a bulk command write.
+    // Interleaved bytes reach the encoder as garbage and it rejects the login.
+    private let writeQueue = DispatchQueue(label: "saxble.write")
 
     override init() {
         super.init()
@@ -99,30 +102,33 @@ final class BLEManager: NSObject, ObservableObject {
     /// Send a command line; the configured CR+LF is appended automatically.
     func send(_ line: String) {
         // A "password <new>" line is rate-sensitive like the login prompt, so
-        // always pace it. Everything else can go as a single write.
-        if line.lowercased().hasPrefix("password ") { sendSlow(line); return }
-        guard let p = peripheral, let c = writeChar else { return }
-        rememberRetype(line)
-        info(tx: line)
-        let payload = line + Encoder.lineEnding
-        let type: CBCharacteristicWriteType =
-            c.properties.contains(.writeWithoutResponse) ? .withoutResponse : .withResponse
-        p.writeValue(Data(payload.utf8), for: c, type: type)
+        // pace it; everything else goes out back-to-back (but still serialised).
+        let paced = line.lowercased().hasPrefix("password ")
+        enqueueWrite(line, paced: paced)
     }
 
-    /// Send one byte at a time with a small gap — needed for the password
+    /// Send a line one byte at a time with a small gap — needed for the password
     /// prompt, which drops characters from a single bulk write.
     func sendSlow(_ line: String) {
+        enqueueWrite(line, paced: true)
+    }
+
+    /// Queue a write on the serial pipeline. `paced` inserts the slow per-byte
+    /// gap (password prompt); otherwise the bytes go out back-to-back. Either
+    /// way the whole line is written before the next queued line begins, so a
+    /// paced password can never interleave with a command and get garbled.
+    private func enqueueWrite(_ line: String, paced: Bool) {
         guard let p = peripheral, let c = writeChar else { return }
         rememberRetype(line)
         info(tx: line)
         let bytes = Array((line + Encoder.lineEnding).utf8)
         let type: CBCharacteristicWriteType =
             c.properties.contains(.writeWithoutResponse) ? .withoutResponse : .withResponse
-        slowQueue.async {
+        let gap = paced ? Encoder.slowByteGap : 0
+        writeQueue.async {
             for b in bytes {
                 DispatchQueue.main.async { p.writeValue(Data([b]), for: c, type: type) }
-                Thread.sleep(forTimeInterval: Encoder.slowByteGap)
+                if gap > 0 { Thread.sleep(forTimeInterval: gap) }
             }
         }
     }

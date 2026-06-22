@@ -13,6 +13,12 @@ final class PresetRunner: ObservableObject {
 
     func run(_ preset: Preset, ble: BLEManager) {
         guard !running else { return }
+        // Presets only make sense once logged in — running before the AUTH light
+        // means every command is rejected and (worse) collides with auto-login.
+        guard ble.loggedIn else {
+            status = "Not logged in — wait for the AUTH light before running a preset."
+            return
+        }
         running = true
         Task {
             for step in preset.steps {
@@ -66,7 +72,7 @@ struct PresetsTab: View {
                             Spacer()
                             Button("Run") { runner.run(preset, ble: ble) }
                                 .buttonStyle(.borderedProminent)
-                                .disabled(runner.running)
+                                .disabled(runner.running || !ble.loggedIn)
                         }
                     }
                 } footer: {
