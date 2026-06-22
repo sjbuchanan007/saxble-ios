@@ -46,10 +46,11 @@ struct ConsoleTab: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
                         Button {
-                            if let url = Report.makePDF(
-                                title: "SAXBLE Commissioning Report",
-                                subtitle: ble.peerName.isEmpty ? "Encoder session" : ble.peerName,
-                                body: ble.transcript()) {
+                            let rx = ble.log.filter { $0.kind == .rx }.map(\.text)
+                            if let url = Report.commissioningPDF(
+                                rxLines: rx,
+                                transcript: ble.transcript(),
+                                fallbackName: ble.peerName.isEmpty ? "encoder" : ble.peerName) {
                                 share = ShareItem(items: [url])
                             }
                         } label: { Label("Export PDF report", systemImage: "doc.richtext") }
