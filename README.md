@@ -83,7 +83,8 @@ your **Team**, plug in your iPhone, and **Run**.
 | `SAXBLE/BLEManager.swift` | CoreBluetooth central: scan/connect/login/send |
 | `SAXBLE/Commands.swift` | full SAX-D command catalogue (ported from firmware) |
 | `SAXBLE/Presets.swift` | preset sequences |
-| `SAXBLE/ScanView.swift` / `ConnectedView.swift` / `PresetsView.swift` / `ConsoleView.swift` | UI |
+| `SAXBLE/Report.swift` | PDF commissioning-report export + share sheet |
+| `SAXBLE/ScanView.swift` / `ConnectedView.swift` / `PresetsView.swift` / `ConsoleView.swift` | UI (Gas / General / Presets / Console tabs) |
 
 See `CLAUDE.md` for the encoder protocol details and the decisions behind this
 code (useful context if you continue the work in a new Claude Code session).

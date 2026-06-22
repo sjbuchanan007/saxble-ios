@@ -1,12 +1,15 @@
 import SwiftUI
 
-/// Main screen once connected: command menus, presets, and the live console.
+/// Main screen once connected: Gas / General command grids, presets, console.
 struct ConnectedView: View {
     @EnvironmentObject var ble: BLEManager
 
     var body: some View {
         TabView {
-            CommandsTab().tabItem { Label("Commands", systemImage: "list.bullet") }
+            CommandGridTab(category: SAXCommands.gasCategory, tint: .orange)
+                .tabItem { Label("Gas", systemImage: "flame.fill") }
+            CommandGridTab(category: SAXCommands.generalCategory, tint: .blue)
+                .tabItem { Label("General", systemImage: "gearshape.2.fill") }
             PresetsTab().tabItem { Label("Presets", systemImage: "wand.and.stars") }
             ConsoleTab().tabItem { Label("Console", systemImage: "terminal") }
         }
@@ -46,62 +49,59 @@ struct BigCard: View {
 
 // MARK: - Commands
 
-struct CommandsTab: View {
+/// One command category (Gas or General) shown as a 2-column grid of buttons.
+struct CommandGridTab: View {
     @EnvironmentObject var ble: BLEManager
+    let category: CommandCategory
+    var tint: Color = .accentColor
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVGrid(columns: cardColumns, spacing: 16) {
-                    ForEach(SAXCommands.categories) { cat in
+                LazyVGrid(columns: cardColumns, spacing: 14) {
+                    ForEach(category.commands) { cmd in
                         NavigationLink {
-                            CategoryListView(category: cat)
+                            CommandDetailView(cmd: cmd)
                         } label: {
-                            BigCard(title: cat.title,
-                                    subtitle: "\(cat.commands.count) commands",
-                                    systemImage: icon(for: cat.id),
-                                    tint: tint(for: cat.id))
+                            CommandCard(cmd: cmd, tint: tint)
                         }
                         .buttonStyle(.plain)
                     }
                 }
                 .padding(16)
             }
-            .navigationTitle("Commands")
+            .navigationTitle(category.title)
             .toolbar { AuthToolbar() }
         }
     }
-
-    private func icon(for id: String) -> String {
-        id == "gas" ? "flame.fill" : "gearshape.2.fill"
-    }
-    private func tint(for id: String) -> Color {
-        id == "gas" ? .orange : .blue
-    }
 }
 
-/// The list of commands inside one category (Gas / General).
-struct CategoryListView: View {
-    let category: CommandCategory
+/// A compact command button used in the grids.
+struct CommandCard: View {
+    let cmd: CommandDef
+    var tint: Color = .accentColor
 
     var body: some View {
-        List {
-            ForEach(category.commands) { cmd in
-                NavigationLink {
-                    CommandDetailView(cmd: cmd)
-                } label: {
-                    HStack {
-                        Text(cmd.label)
-                        if cmd.destructive {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.orange).font(.caption)
-                        }
-                    }
-                }
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: cmd.destructive
+                      ? "exclamationmark.triangle.fill" : "chevron.right.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(cmd.destructive ? .orange : tint)
+                Spacer()
             }
+            Spacer(minLength: 4)
+            Text(cmd.label)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .navigationTitle(category.title)
-        .toolbar { AuthToolbar() }
+        .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
+        .padding(14)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.quaternary))
     }
 }
 

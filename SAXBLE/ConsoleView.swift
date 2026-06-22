@@ -6,6 +6,7 @@ struct ConsoleTab: View {
     @EnvironmentObject var ble: BLEManager
     @State private var entry = ""
     @FocusState private var entryFocused: Bool
+    @State private var share: ShareItem?
 
     var body: some View {
         NavigationStack {
@@ -43,8 +44,19 @@ struct ConsoleTab: View {
             .toolbar {
                 AuthToolbar()
                 ToolbarItem(placement: .topBarLeading) {
-                    ShareLink(item: ble.transcript(),
-                              preview: SharePreview("SAXBLE session")) {
+                    Menu {
+                        Button {
+                            if let url = Report.makePDF(
+                                title: "SAXBLE Commissioning Report",
+                                subtitle: ble.peerName.isEmpty ? "Encoder session" : ble.peerName,
+                                body: ble.transcript()) {
+                                share = ShareItem(items: [url])
+                            }
+                        } label: { Label("Export PDF report", systemImage: "doc.richtext") }
+                        Button {
+                            share = ShareItem(items: [ble.transcript()])
+                        } label: { Label("Share transcript (text)", systemImage: "doc.plaintext") }
+                    } label: {
                         Image(systemName: "square.and.arrow.up")
                     }
                 }
@@ -53,6 +65,7 @@ struct ConsoleTab: View {
                     Button("Done") { entryFocused = false }
                 }
             }
+            .sheet(item: $share) { ShareSheet(items: $0.items) }
         }
     }
 
