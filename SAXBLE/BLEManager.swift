@@ -83,6 +83,18 @@ final class BLEManager: NSObject, ObservableObject {
         if let p = peripheral { central.cancelPeripheralConnection(p) }
     }
 
+    /// Log out of the encoder console, then drop the BLE link so the UI returns
+    /// to the scan screen. The `logout` command clears the encoder's session;
+    /// disconnecting flips `phase` back to `.scanning` via the delegate.
+    func logout() {
+        if writeChar != nil { send("logout") }
+        loggedIn = false
+        // Let the logout bytes flush before we tear down the connection.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+            self?.disconnect()
+        }
+    }
+
     /// Mark that the next "Y or N" prompt should be auto-answered "Y".
     func expectConfirm() { awaitingConfirm = true }
 
