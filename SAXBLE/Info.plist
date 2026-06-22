@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>SAXBLE</string>
+    <!-- Required: iOS refuses to use Bluetooth without a usage string. -->
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>SAXBLE connects to the SAX-D gas-alarm encoder over Bluetooth to send setup commands and read its responses.</string>
+    <key>UILaunchScreen</key>
+    <dict/>
+    <key>UIApplicationSceneManifest</key>
+    <dict>
+        <key>UIApplicationSupportsMultipleScenes</key>
+        <false/>
+    </dict>
+</dict>
+</plist>

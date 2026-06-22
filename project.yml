@@ -1,0 +1,31 @@
+# XcodeGen project definition — generates SAXBLE.xcodeproj reproducibly.
+#   brew install xcodegen   (once)
+#   xcodegen generate       (in this folder, whenever sources change)
+# Then open SAXBLE.xcodeproj and set your signing Team on the SAXBLE target.
+#
+# Prefer not to use XcodeGen? See README.md for the "create the project by hand
+# in Xcode" route — the Swift files are the same either way.
+
+name: SAXBLE
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+targets:
+  SAXBLE:
+    type: application
+    platform: iOS
+    sources:
+      - path: SAXBLE
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.saxble
+        INFOPLIST_FILE: SAXBLE/Info.plist
+        TARGETED_DEVICE_FAMILY: "1,2"   # iPhone + iPad
+        SWIFT_VERSION: "5.0"
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        # Set your own team in Xcode (Signing & Capabilities) before running on
+        # a device, or via:  DEVELOPMENT_TEAM: ABCDE12345
