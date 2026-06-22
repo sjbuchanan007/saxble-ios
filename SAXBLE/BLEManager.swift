@@ -66,9 +66,9 @@ final class BLEManager: NSObject, ObservableObject {
         devices.removeAll()
         phase = .scanning
         // Encoder doesn't advertise its service UUID, so scan for everything and
-        // let the user pick (the name hint floats a likely match to the top).
-        central.scanForPeripherals(withServices: nil,
-            options: [CBCentralManagerScanOptionAllowDuplicatesKey: true])
+        // let the user pick. Duplicates are OFF so the list doesn't churn on
+        // every advertising packet (which made rows jump and impossible to tap).
+        central.scanForPeripherals(withServices: nil, options: nil)
     }
 
     func connect(_ device: DiscoveredDevice) {
@@ -232,14 +232,20 @@ extension BLEManager: CBCentralManagerDelegate {
         let dev = DiscoveredDevice(id: peripheral.identifier, name: name,
                                    rssi: RSSI.intValue, peripheral: peripheral)
         if let i = devices.firstIndex(where: { $0.id == dev.id }) {
-            devices[i].rssi = dev.rssi
-        } else {
-            devices.append(dev)
+            devices[i].rssi = dev.rssi   // refresh signal in place, no reorder
+            return
         }
-        // Likely encoder first, then strongest signal.
+        devices.append(dev)
+        // Stable order so rows don't jump while you're trying to tap one:
+        // likely encoder first, then named devices before "(unknown)", then
+        // alphabetical. Deliberately NOT sorted by RSSI (it jitters constantly).
         devices.sort {
-            let a = $0.name == Encoder.nameHint, b = $1.name == Encoder.nameHint
-            return a != b ? a : $0.rssi > $1.rssi
+            let aHint = $0.name == Encoder.nameHint, bHint = $1.name == Encoder.nameHint
+            if aHint != bHint { return aHint }
+            let aNamed = $0.name != "(unknown)", bNamed = $1.name != "(unknown)"
+            if aNamed != bNamed { return aNamed }
+            if $0.name != $1.name { return $0.name < $1.name }
+            return $0.id.uuidString < $1.id.uuidString
         }
     }
 
