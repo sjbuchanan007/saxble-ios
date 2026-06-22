@@ -140,12 +140,19 @@ final class BLEManager: NSObject, ObservableObject {
         guard let p = peripheral, let c = writeChar else { return }
         rememberRetype(line)
         info(tx: line)
-        let bytes = Array((line + Encoder.lineEnding).utf8)
+        let content = Array(line.utf8)
+        let terminator = Array(Encoder.lineEnding.utf8)
         let type: CBCharacteristicWriteType =
             c.properties.contains(.writeWithoutResponse) ? .withoutResponse : .withResponse
         let gap = paced ? Encoder.slowByteGap : 0
         writeQueue.async {
-            for b in bytes {
+            for b in content {
+                DispatchQueue.main.async { p.writeValue(Data([b]), for: c, type: type) }
+                if gap > 0 { Thread.sleep(forTimeInterval: gap) }
+            }
+            // Let the encoder commit the final character before the terminator.
+            if paced { Thread.sleep(forTimeInterval: Encoder.slowTerminatorGap) }
+            for b in terminator {
                 DispatchQueue.main.async { p.writeValue(Data([b]), for: c, type: type) }
                 if gap > 0 { Thread.sleep(forTimeInterval: gap) }
             }
