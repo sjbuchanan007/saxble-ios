@@ -75,6 +75,17 @@ your **Team**, plug in your iPhone, and **Run**.
 - **`@Published`/`ObservableObject` errors about missing `Combine`** — the file
   needs `import Combine` (already present in the shipped sources).
 
+## Report letterhead logo
+The PDF commissioning report draws a logo at the top of the first page if the
+app contains an image named **`shire-logo`**. To add it:
+
+- **XcodeGen / loose file:** drop `shire-logo.png` into the `SAXBLE/` folder and
+  re-run `xcodegen generate` (it's bundled automatically), **or**
+- **Asset catalog:** add the PNG to `Assets.xcassets` as an image set named
+  `shire-logo`.
+
+If no such image is present the report simply omits the logo — no error.
+
 ## Project layout
 | File | Responsibility |
 |------|----------------|

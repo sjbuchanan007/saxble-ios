@@ -14,6 +14,9 @@ struct GasChannel {
     var highAlarm: String?
     var lowAlarm: String?
     var dropAlarm: String?
+    var hiDiff: String?
+    var loDiff: String?
+    var pdDiff: String?
     var units: String?
     var display: String?
     var name: String?
@@ -102,6 +105,9 @@ enum Report {
         case "High Alarm":   ch.highAlarm = value
         case "Low Alarm":    ch.lowAlarm = value
         case "Drop Alarm":   ch.dropAlarm = value
+        case "Hi_Diff":      ch.hiDiff = value
+        case "Lo_Diff":      ch.loDiff = value
+        case "Pd_Diff":      ch.pdDiff = value
         case "Units":        ch.units = value
         case "Display":      ch.display = value
         case "Gas Name":     ch.name = value
@@ -142,10 +148,13 @@ enum Report {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("SAXBLE-\(slug(loc))-\(df.string(from: now)).pdf")
 
+        // Optional letterhead logo (add a "shire-logo" image to the app to use).
+        let logo = UIImage(named: "shire-logo")
+
         let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
         do {
             try renderer.writePDF(to: url) { ctx in
-                draw(summary, into: ctx, pageRect: pageRect, margin: margin)
+                draw(summary, into: ctx, pageRect: pageRect, margin: margin, logo: logo)
                 draw(log, into: ctx, pageRect: pageRect, margin: margin)
             }
             return url
@@ -154,26 +163,42 @@ enum Report {
         }
     }
 
-    /// Draw an attributed string across as many pages as needed.
+    /// Draw an attributed string across as many pages as needed. If `logo` is
+    /// supplied it's drawn at the top of the first page and the text starts
+    /// below it.
     private static func draw(_ text: NSAttributedString, into ctx: UIGraphicsPDFRendererContext,
-                             pageRect: CGRect, margin: CGFloat) {
+                             pageRect: CGRect, margin: CGFloat, logo: UIImage? = nil) {
         guard text.length > 0 else { return }
-        let content = pageRect.insetBy(dx: margin, dy: margin)
         let fs = CTFramesetterCreateWithAttributedString(text)
         var pos = 0
         let total = text.length
+        var firstPage = true
         repeat {
             ctx.beginPage()
             let cg = ctx.cgContext
+
+            // Logo is drawn in UIKit coordinates (top-left origin) before the flip.
+            var topInset = margin
+            if firstPage, let logo {
+                let logoW = min(pageRect.width - margin * 2, 240)
+                let logoH = logo.size.width > 0 ? logo.size.height * (logoW / logo.size.width) : 0
+                logo.draw(in: CGRect(x: margin, y: margin, width: logoW, height: logoH))
+                topInset = margin + logoH + 16
+            }
+
             cg.textMatrix = .identity
             cg.translateBy(x: 0, y: pageRect.height)
-            cg.scaleBy(x: 1, y: -1)
-            let path = CGPath(rect: content, transform: nil)
-            let frame = CTFramesetterCreateFrame(fs, CFRangeMake(pos, 0), path, nil)
+            cg.scaleBy(x: 1, y: -1)   // CoreText draws bottom-up
+            let textRect = CGRect(x: margin, y: margin,
+                                  width: pageRect.width - margin * 2,
+                                  height: pageRect.height - topInset - margin)
+            let frame = CTFramesetterCreateFrame(fs, CFRangeMake(pos, 0),
+                                                 CGPath(rect: textRect, transform: nil), nil)
             CTFrameDraw(frame, cg)
             let drawn = CTFrameGetVisibleStringRange(frame).length
             if drawn <= 0 { break }
             pos += drawn
+            firstPage = false
         } while pos < total
     }
 
@@ -203,11 +228,11 @@ enum Report {
                             .monospacedSystemFont(ofSize: 9, weight: .regular)))
         }
 
-        // Gas table
+        // Gas table. ± columns are the alarm differentials (hysteresis).
         out.append(line("\nGas Channels\n", .boldSystemFont(ofSize: 13)))
-        let cols = [("Ch", 4), ("Type", 7), ("Pressure", 11), ("High Alarm", 12),
-                    ("Low Alarm", 12), ("Drop Alarm", 12), ("Display", 18)]
-        var table = row(cols.map { ($0.0, $0.1) }) + "\n"
+        let cols = [("Ch", 3), ("Type", 6), ("Pressure", 10), ("High", 10), ("Hi±", 6),
+                    ("Low", 10), ("Lo±", 6), ("Drop", 10), ("Pd±", 6), ("Display", 18)]
+        var table = row(cols) + "\n"
         table += String(repeating: "─", count: cols.reduce(0) { $0 + $1.1 }) + "\n"
         if data.channels.isEmpty {
             table += "(no `gas a list` output captured in this session)\n"
@@ -215,20 +240,25 @@ enum Report {
             for ch in data.channels {
                 if ch.enabled {
                     table += row([
-                        ("\(ch.index)", 4),
-                        (ch.type ?? "—", 7),
-                        (ch.pressure ?? "—", 11),
-                        (ch.highAlarm ?? "—", 12),
-                        (ch.lowAlarm ?? "—", 12),
-                        (ch.dropAlarm ?? "—", 12),
+                        ("\(ch.index)", 3),
+                        (ch.type ?? "—", 6),
+                        (ch.pressure ?? "—", 10),
+                        (ch.highAlarm ?? "—", 10),
+                        (num(ch.hiDiff), 6),
+                        (ch.lowAlarm ?? "—", 10),
+                        (num(ch.loDiff), 6),
+                        (ch.dropAlarm ?? "—", 10),
+                        (num(ch.pdDiff), 6),
                         (ch.display ?? "—", 18),
                     ]) + "\n"
                 } else {
-                    table += row([("\(ch.index)", 4), ("disabled", 7)]) + "\n"
+                    table += row([("\(ch.index)", 3), ("disabled", 0)]) + "\n"
                 }
             }
         }
         out.append(line(table, .monospacedSystemFont(ofSize: 8, weight: .regular)))
+        out.append(line("Hi± / Lo± / Pd± = alarm differentials (hysteresis).\n",
+                        .systemFont(ofSize: 8), .secondaryLabel))
 
         // System settings
         out.append(line("\nSystem Settings\n", .boldSystemFont(ofSize: 13)))
@@ -257,6 +287,12 @@ enum Report {
     private static func line(_ s: String, _ font: UIFont,
                              _ color: UIColor = .label) -> NSAttributedString {
         NSAttributedString(string: s, attributes: [.font: font, .foregroundColor: color])
+    }
+
+    /// Just the numeric part of a differential ("0.20 Bar" -> "0.20"), or "—".
+    private static func num(_ s: String?) -> String {
+        guard let s, let first = s.split(separator: " ").first else { return "—" }
+        return String(first)
     }
 
     /// Fixed-width row: each cell padded/truncated to its column width, except
