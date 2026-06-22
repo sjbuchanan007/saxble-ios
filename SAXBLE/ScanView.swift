@@ -16,7 +16,7 @@ struct ScanView: View {
                 }
                 LazyVStack(spacing: 12) {
                     ForEach(ble.devices) { dev in
-                        Button { ble.connect(dev) } label: { DeviceRow(dev: dev) }
+                        Button { Haptics.tap(); ble.connect(dev) } label: { DeviceRow(dev: dev) }
                             .buttonStyle(PressableCardStyle())
                     }
                 }
@@ -27,6 +27,7 @@ struct ScanView: View {
             .toolbar {
                 Button { ble.startScan() } label: { Image(systemName: "arrow.clockwise") }
             }
+            .brandNavBar()
             .overlay {
                 if ble.devices.isEmpty {
                     ContentUnavailableView("Scanning…",

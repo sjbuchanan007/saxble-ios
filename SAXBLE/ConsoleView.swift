@@ -67,6 +67,7 @@ struct ConsoleTab: View {
                 }
             }
             .sheet(item: $share) { ShareSheet(items: $0.items) }
+            .brandNavBar()
         }
     }
 
@@ -74,6 +75,7 @@ struct ConsoleTab: View {
         let line = entry.trimmingCharacters(in: .whitespaces)
         guard !line.isEmpty else { return }
         ble.send(line)
+        Haptics.tap()
         entry = ""
         entryFocused = false
     }

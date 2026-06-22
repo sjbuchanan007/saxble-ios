@@ -19,6 +19,7 @@ final class PresetRunner: ObservableObject {
             status = "Not logged in — wait for the AUTH light before running a preset."
             return
         }
+        Haptics.tap()
         running = true
         Task {
             for step in preset.steps {
@@ -99,6 +100,7 @@ struct PresetsTab: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Presets")
             .toolbar { AuthToolbar() }
+            .brandNavBar()
             .alert("System location", isPresented: $runner.needLocation) {
                 TextField("e.g. Ward 4 Theatre 2", text: $location)
                 Button("Send") { runner.submitLocation(location); location = "" }

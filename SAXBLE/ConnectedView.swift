@@ -28,6 +28,21 @@ extension Color {
 /// Two equal, comfortably spaced columns used by the card grids.
 let cardColumns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
 
+/// Brand gradient navigation bar (white title/buttons over teal→green).
+struct BrandNavBar: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(
+                LinearGradient(colors: [.shireTeal, .shireGreen],
+                               startPoint: .leading, endPoint: .trailing),
+                for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+    }
+}
+extension View { func brandNavBar() -> some View { modifier(BrandNavBar()) } }
+
 /// Subtle tactile press for card buttons.
 struct PressableCardStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
@@ -124,6 +139,7 @@ struct CommandGridTab: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle(category.title)
             .toolbar { AuthToolbar() }
+            .brandNavBar()
         }
     }
 }
@@ -228,6 +244,7 @@ struct CommandDetailView: View {
         }
         .navigationTitle(cmd.label)
         .toolbar { AuthToolbar() }
+        .brandNavBar()
         .alert("Confirm \(cmd.label)?", isPresented: $showConfirm) {
             Button("Send", role: .destructive) { fire() }
             Button("Cancel", role: .cancel) {}
@@ -245,7 +262,7 @@ struct CommandDetailView: View {
     }
 
     private func fire() {
-        if cmd.destructive { ble.expectConfirm() }
+        if cmd.destructive { ble.expectConfirm(); Haptics.warning() } else { Haptics.tap() }
         // Password change is rate-sensitive on this encoder → send slowly.
         let line = cmd.build(channel: channel, param: currentParam())
         if cmd.id == "gen_password" {

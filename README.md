@@ -88,6 +88,14 @@ app contains an image named **`shire-logo`**. To add it:
 
 If no such image is present the report simply omits the logo — no error.
 
+## App icon
+`SAXBLE/Assets.xcassets/AppIcon.appiconset` ships a brand-coloured placeholder
+icon (teal→green gauge). XcodeGen wires it up via
+`ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon`. To use your own, replace
+`icon-1024.png` with a 1024×1024 PNG (no transparency), or drop a new image into
+the **AppIcon** slot in Xcode's asset catalog. Building by hand? Make sure the
+app target's **App Icon Set Name** build setting is `AppIcon`.
+
 ## Project layout
 | File | Responsibility |
 |------|----------------|

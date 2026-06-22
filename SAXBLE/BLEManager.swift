@@ -177,7 +177,7 @@ final class BLEManager: NSObject, ObservableObject {
             }
             return
         }
-        if line.contains(Encoder.loginMarker) { loggedIn = true; return }
+        if line.contains(Encoder.loginMarker) { loggedIn = true; Haptics.success(); return }
 
         // "Retype password" → resend the same value slowly, then forget it.
         if lower.contains("retype"), let pw = pendingRetype {
@@ -186,7 +186,7 @@ final class BLEManager: NSObject, ObservableObject {
             }
             return
         }
-        if lower.contains("password updated") { info("password updated successfully"); pendingRetype = nil; return }
+        if lower.contains("password updated") { info("password updated successfully"); pendingRetype = nil; Haptics.success(); return }
 
         let isPrompt = lower.contains("password") && line.hasSuffix(":")
         let isInvalid = lower.contains("invalid password")
