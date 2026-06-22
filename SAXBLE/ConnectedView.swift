@@ -8,21 +8,75 @@ struct ConnectedView: View {
         TabView {
             CommandGridTab(category: SAXCommands.gasCategory, tint: .orange)
                 .tabItem { Label("Gas", systemImage: "flame.fill") }
-            CommandGridTab(category: SAXCommands.generalCategory, tint: .blue)
+            CommandGridTab(category: SAXCommands.generalCategory, tint: .shireTeal)
                 .tabItem { Label("General", systemImage: "gearshape.2.fill") }
             PresetsTab().tabItem { Label("Presets", systemImage: "wand.and.stars") }
             ConsoleTab().tabItem { Label("Console", systemImage: "terminal") }
         }
+        .tint(.shireTeal)
     }
 }
 
-// MARK: - Shared layout
+// MARK: - Theme & shared layout
+
+extension Color {
+    /// Shire Controls brand colours (from the logo).
+    static let shireTeal  = Color(red: 0.05, green: 0.44, blue: 0.49)
+    static let shireGreen = Color(red: 0.55, green: 0.78, blue: 0.25)
+}
 
 /// Two equal, comfortably spaced columns used by the card grids.
-let cardColumns = [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
+let cardColumns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
 
-/// A big tappable card (category launcher / preset). Looks the same whether it
-/// wraps a NavigationLink or a Button so the whole UI feels consistent.
+/// Subtle tactile press for card buttons.
+struct PressableCardStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+/// Frosted, lightly tinted card background shared by every launcher card.
+struct CardSurface: ViewModifier {
+    var tint: Color
+    var radius: CGFloat = 18
+    func body(content: Content) -> some View {
+        content.background(
+            ZStack {
+                RoundedRectangle(cornerRadius: radius, style: .continuous).fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: radius, style: .continuous).fill(tint.opacity(0.10))
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .strokeBorder(tint.opacity(0.22), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 4)
+    }
+}
+extension View {
+    func cardSurface(_ tint: Color, radius: CGFloat = 18) -> some View {
+        modifier(CardSurface(tint: tint, radius: radius))
+    }
+}
+
+/// Tinted rounded icon badge.
+struct IconBadge: View {
+    let systemImage: String
+    var tint: Color = .accentColor
+    var size: CGFloat = 40
+    var body: some View {
+        Image(systemName: systemImage)
+            .font(.system(size: size * 0.42, weight: .semibold))
+            .foregroundStyle(tint)
+            .frame(width: size, height: size)
+            .background(tint.opacity(0.15),
+                        in: RoundedRectangle(cornerRadius: size * 0.3, style: .continuous))
+    }
+}
+
+/// A big launcher / preset card.
 struct BigCard: View {
     let title: String
     let subtitle: String
@@ -31,18 +85,15 @@ struct BigCard: View {
     var enabled: Bool = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Image(systemName: systemImage)
-                .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(tint)
-            Spacer(minLength: 8)
+        VStack(alignment: .leading, spacing: 12) {
+            IconBadge(systemImage: systemImage, tint: tint, size: 48)
+            Spacer(minLength: 10)
             Text(title).font(.headline).foregroundStyle(.primary)
             Text(subtitle).font(.caption).foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, minHeight: 130, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 140, alignment: .leading)
         .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(.quaternary))
+        .cardSurface(tint)
         .opacity(enabled ? 1 : 0.5)
     }
 }
@@ -65,11 +116,12 @@ struct CommandGridTab: View {
                         } label: {
                             CommandCard(cmd: cmd, tint: tint)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressableCardStyle())
                     }
                 }
                 .padding(16)
             }
+            .background(Color(.systemGroupedBackground))
             .navigationTitle(category.title)
             .toolbar { AuthToolbar() }
         }
@@ -80,28 +132,37 @@ struct CommandGridTab: View {
 struct CommandCard: View {
     let cmd: CommandDef
     var tint: Color = .accentColor
+    private var color: Color { cmd.destructive ? .orange : tint }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: cmd.destructive
-                      ? "exclamationmark.triangle.fill" : "chevron.right.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(cmd.destructive ? .orange : tint)
-                Spacer()
-            }
-            Spacer(minLength: 4)
+        VStack(alignment: .leading, spacing: 12) {
+            IconBadge(systemImage: icon, tint: color, size: 38)
+            Spacer(minLength: 6)
             Text(cmd.label)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.primary)
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
+            Text(cmd.token)
+                .font(.system(.caption2, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
         .padding(14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.quaternary))
+        .cardSurface(color, radius: 16)
+    }
+
+    /// Icon hints at what the command does.
+    private var icon: String {
+        if cmd.destructive { return "exclamationmark.triangle.fill" }
+        switch cmd.param {
+        case .enumPick: return "slider.horizontal.3"
+        case .numeric:  return "number"
+        case .text:     return "textformat"
+        case .none:     return "bolt.fill"
+        }
     }
 }
 
@@ -151,10 +212,18 @@ struct CommandDetailView: View {
                 }
             }
             Section {
-                Button(cmd.destructive ? "Send (destructive)…" : "Send") {
+                Button {
                     if cmd.destructive { showConfirm = true } else { fire() }
+                } label: {
+                    Text(cmd.destructive ? "Send (destructive)" : "Send")
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
                 }
-                .foregroundStyle(cmd.destructive ? .red : .accentColor)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .tint(cmd.destructive ? .red : .shireTeal)
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                .listRowBackground(Color.clear)
             }
         }
         .navigationTitle(cmd.label)

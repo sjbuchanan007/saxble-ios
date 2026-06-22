@@ -68,10 +68,10 @@ struct PresetsTab: View {
                                 BigCard(title: preset.name,
                                         subtitle: "\(preset.steps.count) steps",
                                         systemImage: "wand.and.stars",
-                                        tint: .purple,
+                                        tint: .shireGreen,
                                         enabled: ble.loggedIn)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PressableCardStyle())
                             .disabled(runner.running || !ble.loggedIn)
                         }
                     }
@@ -96,6 +96,7 @@ struct PresetsTab: View {
                 }
                 .padding(16)
             }
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Presets")
             .toolbar { AuthToolbar() }
             .alert("System location", isPresented: $runner.needLocation) {

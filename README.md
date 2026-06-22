@@ -26,7 +26,9 @@ solid, so none of the radio headaches of the abandoned Tab5 port apply here.
 - **Presets** — one tap runs a whole sequence (set gas types, disable unused
   gases, enable pressure display, set password, prompt for location, list).
 - **Console** — live transcript of everything to/from the encoder, a raw-command
-  field, and a **Share** button to export the session (AirDrop / email / Files).
+  field, and an **Export** menu: a structured **PDF commissioning report**
+  (letterhead logo + gas table with alarm differentials + system settings, then
+  the full transcript) or the plain-text transcript (AirDrop / email / Files).
 
 ## Setup
 

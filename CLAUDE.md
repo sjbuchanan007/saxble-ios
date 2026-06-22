@@ -31,8 +31,11 @@ ports that proven behaviour to SwiftUI + CoreBluetooth.
   logic, mirroring the firmware's `ble_uart.cpp` + `main.cpp`.
 - `Commands.swift` / `Presets.swift` are ported 1:1 from the firmware's
   `commands.cpp` / `presets.cpp`. Keep them in sync if the firmware changes.
-- UI is plain SwiftUI: `ScanView` → `ConnectedView` (Commands / Presets /
-  Console tabs).
+- `Report.swift` parses the encoder's `gas a list` / `settings` replies into a
+  structured **PDF commissioning report** (letterhead logo + gas table with
+  alarm differentials + system settings, then the full transcript appended).
+- UI is plain SwiftUI: `ScanView` → `ConnectedView`, a TabView of **Gas /
+  General** (2-column command-card grids) / **Presets** / **Console**.
 
 ## Build / constraints
 - SwiftUI + CoreBluetooth, deployment target **iOS 17** (uses `ShareLink`,
@@ -42,8 +45,12 @@ ports that proven behaviour to SwiftUI + CoreBluetooth.
 - The dev container can't build/run iOS — flash to an iPhone and iterate from
   the serial-equivalent (the in-app Console + Xcode console).
 
+## Done
+- **PDF commissioning report** export (`Report.swift`): structured summary
+  (logo + gas/alarm table + settings) plus appended transcript, named by
+  location + date. Add a `shire-logo` image to brand the header.
+
 ## Not done yet / ideas
 - Persist a password list + last-used (currently hard-coded candidates).
 - Per-device session history / saved reports (currently share-on-demand).
 - Editable presets in-app.
-- PDF commissioning report export (currently plain-text Share).
