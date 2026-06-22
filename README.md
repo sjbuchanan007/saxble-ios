@@ -48,10 +48,32 @@ your **Team**, plug in your iPhone, and **Run**.
 2. Delete the template's `ContentView.swift` / `…App.swift`.
 3. Drag **all the `.swift` files from `SAXBLE/`** into the project (check
    "Copy items if needed").
-4. Add the Bluetooth permission: target ▸ **Info** ▸ add
-   **Privacy – Bluetooth Always Usage Description** with a short string (or use
-   the included `Info.plist`).
-5. Pick your signing Team and Run.
+4. **Add the Bluetooth permission** (required — the app crashes on first scan
+   without it):
+   - Select the **blue project icon** ▸ under **TARGETS** pick the app target ▸
+     **Info** tab ▸ **Custom iOS Target Properties**.
+   - Hover a row, click **+**, and add key **Privacy – Bluetooth Always Usage
+     Description** (`NSBluetoothAlwaysUsageDescription`), Type **String**, value
+     e.g. *"SAXBLE uses Bluetooth to connect to and commission SAX-D gas
+     alarms."*
+   - Optionally also add **Privacy – Bluetooth Peripheral Usage Description**
+     (`NSBluetoothPeripheralUsageDescription`) for older iOS.
+5. Pick your signing Team and Run **on a real iPhone** (the simulator has no
+   Bluetooth).
+
+## Troubleshooting (hand-built project)
+- **`Multiple commands produce …/Info.plist`** — a physical `Info.plist` is in
+  **Build Phases ▸ Copy Bundle Resources** while Xcode also auto-generates one.
+  Remove `Info.plist` from Copy Bundle Resources (leave **Build Settings ▸
+  Generate Info.plist File = Yes**), and add the Bluetooth key via the **Info**
+  tab as above rather than a file.
+- **`Cannot find 'ContentView' in scope`** / two `@main` errors — you kept the
+  template's `…App.swift` and `ContentView.swift`. Delete both; the single entry
+  point is `SAXBLEApp.swift` (`@main` → `RootView`). Only one `@main` per target.
+- **"Would you like to configure an Objective-C bridging header?"** — click
+  **Don't Create**; this project is pure Swift.
+- **`@Published`/`ObservableObject` errors about missing `Combine`** — the file
+  needs `import Combine` (already present in the shipped sources).
 
 ## Project layout
 | File | Responsibility |
