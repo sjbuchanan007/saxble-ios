@@ -285,7 +285,7 @@ struct AuthToolbar: ToolbarContent {
                       systemImage: ble.loggedIn ? "lock.open.fill" : "lock.fill")
                     .labelStyle(.titleAndIcon)
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(ble.loggedIn ? .green : .secondary)
+                    .foregroundStyle(ble.loggedIn ? Color.green : Color.secondary)
                 // Logs out of the encoder and returns to the scan screen.
                 Button { ble.logout() } label: {
                     Image(systemName: "rectangle.portrait.and.arrow.right")

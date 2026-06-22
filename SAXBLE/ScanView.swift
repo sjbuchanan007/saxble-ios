@@ -52,7 +52,7 @@ struct DeviceRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(dev.name).font(.headline).foregroundStyle(.primary)
                 Text(likely ? "Likely encoder" : String(dev.id.uuidString.prefix(8)) + "…")
-                    .font(.caption).foregroundStyle(likely ? .shireGreen : .secondary)
+                    .font(.caption).foregroundStyle(likely ? Color.shireGreen : Color.secondary)
             }
             Spacer()
             VStack(spacing: 2) {
