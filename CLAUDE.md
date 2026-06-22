@@ -16,7 +16,10 @@ ports that proven behaviour to SwiftUI + CoreBluetooth.
   reply. (Cosmetic double prompts `> >` are normal with CRLF.)
 - **Password is rate-sensitive**: a single bulk write drops the last character.
   Send the password — and any `password <new>` command — **one byte at a time**
-  (~35 ms apart). See `BLEManager.sendSlow` / `send`.
+  (~35 ms apart). See `BLEManager.sendSlow` / `send`. Pacing fixes login, but the
+  `password <new>` set can *still* silently drop the last char, so after a change
+  the app reads `settings` back and warns if the stored value differs from what
+  was sent (`verifyingPassword` / `passwordWarning`).
 - Request/response CLI; the encoder does not push data unsolicited.
 - Login success banner contains **`Welcome to Shire`** → set logged-in / AUTH.
 - Destructive commands prompt **`Y or N`** → answer `Y`. Changing the password

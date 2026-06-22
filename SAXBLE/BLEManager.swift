@@ -49,6 +49,13 @@ final class BLEManager: NSObject, ObservableObject {
     // we resend the same value (slowly) when we see that prompt.
     private var pendingRetype: String?
 
+    // After a password change we read `settings` back and check the encoder
+    // stored what we sent (it sometimes drops the last character). `passwordWarning`
+    // is surfaced to the UI when the stored value doesn't match.
+    @Published var passwordWarning: String?
+    private var expectedPassword: String?
+    private var verifyingPassword = false
+
     // All writes funnel through this single serial queue so a paced
     // (byte-by-byte) password can never interleave with a bulk command write.
     // Interleaved bytes reach the encoder as garbage and it rejects the login.
@@ -153,7 +160,17 @@ final class BLEManager: NSObject, ObservableObject {
         let parts = line.split(separator: " ", maxSplits: 1)
         if parts.count == 2, parts[0].lowercased() == "password" {
             pendingRetype = String(parts[1])
+            expectedPassword = String(parts[1])   // verified after "updated"
         }
+    }
+
+    /// Pull the value out of a settings echo line: `Password:      "value"`.
+    /// Returns nil for the bare `Password:` login prompt (no quotes).
+    private static func parseStoredPassword(_ line: String) -> String? {
+        guard line.lowercased().hasPrefix("password:"),
+              let open = line.firstIndex(of: "\""),
+              let close = line.lastIndex(of: "\""), open < close else { return nil }
+        return String(line[line.index(after: open)..<close])
     }
 
     private func info(_ text: String) { append(.init(kind: .info, text: text)) }
@@ -179,6 +196,22 @@ final class BLEManager: NSObject, ObservableObject {
         }
         if line.contains(Encoder.loginMarker) { loggedIn = true; Haptics.success(); return }
 
+        // Verify a just-changed password against the encoder's settings echo.
+        if verifyingPassword, let want = expectedPassword,
+           let stored = Self.parseStoredPassword(line) {
+            verifyingPassword = false
+            expectedPassword = nil
+            if stored == want {
+                info("✓ password verified — encoder stored it correctly")
+            } else {
+                let msg = "⚠️ Password mismatch — you set \"\(want)\" but the encoder stored \"\(stored)\". It dropped a character; change the password again to be safe."
+                info(msg)
+                passwordWarning = msg
+                Haptics.warning()
+            }
+            return
+        }
+
         // "Retype password" → resend the same value slowly, then forget it.
         if lower.contains("retype"), let pw = pendingRetype {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
@@ -186,7 +219,19 @@ final class BLEManager: NSObject, ObservableObject {
             }
             return
         }
-        if lower.contains("password updated") { info("password updated successfully"); pendingRetype = nil; Haptics.success(); return }
+        if lower.contains("password updated") {
+            info("password updated successfully")
+            pendingRetype = nil
+            Haptics.success()
+            // Read it back to confirm the encoder didn't drop the last character.
+            if expectedPassword != nil {
+                verifyingPassword = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+                    self?.send("settings")
+                }
+            }
+            return
+        }
 
         let isPrompt = lower.contains("password") && line.hasSuffix(":")
         let isInvalid = lower.contains("invalid password")

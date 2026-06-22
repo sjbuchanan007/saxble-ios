@@ -14,6 +14,13 @@ struct ConnectedView: View {
             ConsoleTab().tabItem { Label("Console", systemImage: "terminal") }
         }
         .tint(.shireTeal)
+        .alert("Password not saved correctly", isPresented: Binding(
+            get: { ble.passwordWarning != nil },
+            set: { if !$0 { ble.passwordWarning = nil } })) {
+            Button("OK", role: .cancel) { ble.passwordWarning = nil }
+        } message: {
+            Text(ble.passwordWarning ?? "")
+        }
     }
 }
 
