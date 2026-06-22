@@ -177,6 +177,11 @@ enum Report {
             ctx.beginPage()
             let cg = ctx.cgContext
 
+            // Always paint the page white — the PDF must look the same regardless
+            // of the device's light/dark appearance.
+            cg.setFillColor(UIColor.white.cgColor)
+            cg.fill(pageRect)
+
             // Logo is drawn in UIKit coordinates (top-left origin) before the flip.
             var topInset = margin
             if firstPage, let logo {
@@ -211,7 +216,7 @@ enum Report {
 
         out.append(line("SAXBLE Commissioning Report\n", .boldSystemFont(ofSize: 18)))
         out.append(line("\(data.setting("Location") ?? fallbackName)   ·   \(df.string(from: date))\n\n",
-                        .systemFont(ofSize: 10), .secondaryLabel))
+                        .systemFont(ofSize: 10), .darkGray))
 
         // Header facts
         let facts: [(String, String?)] = [
@@ -258,7 +263,7 @@ enum Report {
         }
         out.append(line(table, .monospacedSystemFont(ofSize: 8, weight: .regular)))
         out.append(line("Hi± / Lo± / Pd± = alarm differentials (hysteresis).\n",
-                        .systemFont(ofSize: 8), .secondaryLabel))
+                        .systemFont(ofSize: 8), .darkGray))
 
         // System settings
         out.append(line("\nSystem Settings\n", .boldSystemFont(ofSize: 13)))
@@ -285,7 +290,7 @@ enum Report {
     // MARK: small helpers
 
     private static func line(_ s: String, _ font: UIFont,
-                             _ color: UIColor = .label) -> NSAttributedString {
+                             _ color: UIColor = .black) -> NSAttributedString {
         NSAttributedString(string: s, attributes: [.font: font, .foregroundColor: color])
     }
 
