@@ -259,12 +259,21 @@ enum Report {
         NSAttributedString(string: s, attributes: [.font: font, .foregroundColor: color])
     }
 
-    /// Fixed-width row: each cell padded/truncated to its column width.
+    /// Fixed-width row: each cell padded/truncated to its column width, except
+    /// the final cell which is written in full (so trailing text isn't clipped).
     private static func row(_ cells: [(String, Int)]) -> String {
-        cells.map { text, width -> String in
-            if text.count >= width { return String(text.prefix(max(0, width - 1))) + " " }
-            return text + String(repeating: " ", count: width - text.count)
-        }.joined()
+        var out = ""
+        for (i, cell) in cells.enumerated() {
+            let (text, width) = cell
+            if i == cells.count - 1 {
+                out += text
+            } else if text.count >= width {
+                out += String(text.prefix(max(0, width - 1))) + " "
+            } else {
+                out += text + String(repeating: " ", count: width - text.count)
+            }
+        }
+        return out
     }
 
     /// Filesystem-safe token from a location string.
