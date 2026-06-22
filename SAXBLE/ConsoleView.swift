@@ -5,6 +5,7 @@ import SwiftUI
 struct ConsoleTab: View {
     @EnvironmentObject var ble: BLEManager
     @State private var entry = ""
+    @FocusState private var entryFocused: Bool
 
     var body: some View {
         NavigationStack {
@@ -31,6 +32,8 @@ struct ConsoleTab: View {
                     TextField("raw command", text: $entry)
                         .textFieldStyle(.roundedBorder)
                         .autocorrectionDisabled().textInputAutocapitalization(.never)
+                        .focused($entryFocused)
+                        .submitLabel(.send)
                         .onSubmit(sendRaw)
                     Button("Send", action: sendRaw).disabled(entry.isEmpty)
                 }
@@ -45,6 +48,10 @@ struct ConsoleTab: View {
                         Image(systemName: "square.and.arrow.up")
                     }
                 }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { entryFocused = false }
+                }
             }
         }
     }
@@ -54,6 +61,7 @@ struct ConsoleTab: View {
         guard !line.isEmpty else { return }
         ble.send(line)
         entry = ""
+        entryFocused = false
     }
 
     private func color(for kind: LogLine.Kind) -> Color {
