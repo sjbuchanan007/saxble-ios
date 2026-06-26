@@ -168,12 +168,13 @@ missing Location, deleting files + index together, corrupt index recovery.
 - **No network:** everything stays on-device (no account/sync) unless that
   becomes a requirement.
 
-## Open decisions (need a call before building)
-1. Password storage: **Keychain** (recommended) vs UserDefaults?
-2. **Redact the password** in saved/shared PDFs (and transcript)? Recommended: yes.
-3. History grouping key: **Location with name/UUID fallback** (recommended) — OK?
-4. Save trigger: explicit only first, or also **auto-save on logout**?
-5. Build order: which feature first?
+## Decisions (locked)
+1. Password storage: **Keychain** (JSON blob under one item). ✅
+2. **Redact the password** in saved/shared PDFs (settings dump + `>> password`
+   lines); keep it visible in the live in-app console only. ✅
+3. History grouping key: **Location → advertised name → peripheral UUID**. ✅ (proposed)
+4. Save trigger: **explicit "Save to history" first**, auto-save-on-logout later. ✅ (proposed)
+5. Build order / timing: **not yet — revisit after the manufacturer demo.** ✅
 
 ---
 
