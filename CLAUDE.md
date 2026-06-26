@@ -54,6 +54,7 @@ ports that proven behaviour to SwiftUI + CoreBluetooth.
   location + date. Add a `shire-logo` image to brand the header.
 
 ## Not done yet / ideas
+See `ROADMAP.md` for detailed requirements on the first two.
 - Persist a password list + last-used (currently hard-coded candidates).
 - Per-device session history / saved reports (currently share-on-demand).
 - Editable presets in-app.
