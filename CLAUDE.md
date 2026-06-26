@@ -16,7 +16,10 @@ ports that proven behaviour to SwiftUI + CoreBluetooth.
   reply. (Cosmetic double prompts `> >` are normal with CRLF.)
 - **Password is rate-sensitive**: a single bulk write drops the last character.
   Send the password — and any `password <new>` command — **one byte at a time**
-  (~35 ms apart). See `BLEManager.sendSlow` / `send`.
+  (~35 ms apart). See `BLEManager.sendSlow` / `send`. Pacing fixes login, but the
+  `password <new>` set can *still* silently drop the last char, so after a change
+  the app reads `settings` back and warns if the stored value differs from what
+  was sent (`verifyingPassword` / `passwordWarning`).
 - Request/response CLI; the encoder does not push data unsolicited.
 - Login success banner contains **`Welcome to Shire`** → set logged-in / AUTH.
 - Destructive commands prompt **`Y or N`** → answer `Y`. Changing the password
@@ -31,8 +34,11 @@ ports that proven behaviour to SwiftUI + CoreBluetooth.
   logic, mirroring the firmware's `ble_uart.cpp` + `main.cpp`.
 - `Commands.swift` / `Presets.swift` are ported 1:1 from the firmware's
   `commands.cpp` / `presets.cpp`. Keep them in sync if the firmware changes.
-- UI is plain SwiftUI: `ScanView` → `ConnectedView` (Commands / Presets /
-  Console tabs).
+- `Report.swift` parses the encoder's `gas a list` / `settings` replies into a
+  structured **PDF commissioning report** (letterhead logo + gas table with
+  alarm differentials + system settings, then the full transcript appended).
+- UI is plain SwiftUI: `ScanView` → `ConnectedView`, a TabView of **Gas /
+  General** (2-column command-card grids) / **Presets** / **Console**.
 
 ## Build / constraints
 - SwiftUI + CoreBluetooth, deployment target **iOS 17** (uses `ShareLink`,
@@ -42,8 +48,13 @@ ports that proven behaviour to SwiftUI + CoreBluetooth.
 - The dev container can't build/run iOS — flash to an iPhone and iterate from
   the serial-equivalent (the in-app Console + Xcode console).
 
+## Done
+- **PDF commissioning report** export (`Report.swift`): structured summary
+  (logo + gas/alarm table + settings) plus appended transcript, named by
+  location + date. Add a `shire-logo` image to brand the header.
+
 ## Not done yet / ideas
+See `ROADMAP.md` for detailed requirements on the first two.
 - Persist a password list + last-used (currently hard-coded candidates).
 - Per-device session history / saved reports (currently share-on-demand).
 - Editable presets in-app.
-- PDF commissioning report export (currently plain-text Share).

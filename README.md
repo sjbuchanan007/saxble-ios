@@ -26,7 +26,9 @@ solid, so none of the radio headaches of the abandoned Tab5 port apply here.
 - **Presets** — one tap runs a whole sequence (set gas types, disable unused
   gases, enable pressure display, set password, prompt for location, list).
 - **Console** — live transcript of everything to/from the encoder, a raw-command
-  field, and a **Share** button to export the session (AirDrop / email / Files).
+  field, and an **Export** menu: a structured **PDF commissioning report**
+  (letterhead logo + gas table with alarm differentials + system settings, then
+  the full transcript) or the plain-text transcript (AirDrop / email / Files).
 
 ## Setup
 
@@ -48,10 +50,51 @@ your **Team**, plug in your iPhone, and **Run**.
 2. Delete the template's `ContentView.swift` / `…App.swift`.
 3. Drag **all the `.swift` files from `SAXBLE/`** into the project (check
    "Copy items if needed").
-4. Add the Bluetooth permission: target ▸ **Info** ▸ add
-   **Privacy – Bluetooth Always Usage Description** with a short string (or use
-   the included `Info.plist`).
-5. Pick your signing Team and Run.
+4. **Add the Bluetooth permission** (required — the app crashes on first scan
+   without it):
+   - Select the **blue project icon** ▸ under **TARGETS** pick the app target ▸
+     **Info** tab ▸ **Custom iOS Target Properties**.
+   - Hover a row, click **+**, and add key **Privacy – Bluetooth Always Usage
+     Description** (`NSBluetoothAlwaysUsageDescription`), Type **String**, value
+     e.g. *"SAXBLE uses Bluetooth to connect to and commission SAX-D gas
+     alarms."*
+   - Optionally also add **Privacy – Bluetooth Peripheral Usage Description**
+     (`NSBluetoothPeripheralUsageDescription`) for older iOS.
+5. Pick your signing Team and Run **on a real iPhone** (the simulator has no
+   Bluetooth).
+
+## Troubleshooting (hand-built project)
+- **`Multiple commands produce …/Info.plist`** — a physical `Info.plist` is in
+  **Build Phases ▸ Copy Bundle Resources** while Xcode also auto-generates one.
+  Remove `Info.plist` from Copy Bundle Resources (leave **Build Settings ▸
+  Generate Info.plist File = Yes**), and add the Bluetooth key via the **Info**
+  tab as above rather than a file.
+- **`Cannot find 'ContentView' in scope`** / two `@main` errors — you kept the
+  template's `…App.swift` and `ContentView.swift`. Delete both; the single entry
+  point is `SAXBLEApp.swift` (`@main` → `RootView`). Only one `@main` per target.
+- **"Would you like to configure an Objective-C bridging header?"** — click
+  **Don't Create**; this project is pure Swift.
+- **`@Published`/`ObservableObject` errors about missing `Combine`** — the file
+  needs `import Combine` (already present in the shipped sources).
+
+## Report letterhead logo
+The PDF commissioning report draws a logo at the top of the first page if the
+app contains an image named **`shire-logo`**. To add it:
+
+- **XcodeGen / loose file:** drop `shire-logo.png` into the `SAXBLE/` folder and
+  re-run `xcodegen generate` (it's bundled automatically), **or**
+- **Asset catalog:** add the PNG to `Assets.xcassets` as an image set named
+  `shire-logo`.
+
+If no such image is present the report simply omits the logo — no error.
+
+## App icon
+`SAXBLE/Assets.xcassets/AppIcon.appiconset` ships a brand-coloured placeholder
+icon (teal→green gauge). XcodeGen wires it up via
+`ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon`. To use your own, replace
+`icon-1024.png` with a 1024×1024 PNG (no transparency), or drop a new image into
+the **AppIcon** slot in Xcode's asset catalog. Building by hand? Make sure the
+app target's **App Icon Set Name** build setting is `AppIcon`.
 
 ## Project layout
 | File | Responsibility |
@@ -61,7 +104,8 @@ your **Team**, plug in your iPhone, and **Run**.
 | `SAXBLE/BLEManager.swift` | CoreBluetooth central: scan/connect/login/send |
 | `SAXBLE/Commands.swift` | full SAX-D command catalogue (ported from firmware) |
 | `SAXBLE/Presets.swift` | preset sequences |
-| `SAXBLE/ScanView.swift` / `ConnectedView.swift` / `PresetsView.swift` / `ConsoleView.swift` | UI |
+| `SAXBLE/Report.swift` | PDF commissioning-report export + share sheet |
+| `SAXBLE/ScanView.swift` / `ConnectedView.swift` / `PresetsView.swift` / `ConsoleView.swift` | UI (Gas / General / Presets / Console tabs) |
 
 See `CLAUDE.md` for the encoder protocol details and the decisions behind this
 code (useful context if you continue the work in a new Claude Code session).
