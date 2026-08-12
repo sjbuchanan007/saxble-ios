@@ -180,3 +180,84 @@ missing Location, deleting files + index together, corrupt index recovery.
 
 ## Also on the list
 - **Editable presets in-app** (currently `Presets.swift` is compile-time).
+
+---
+
+## Android port — *Planned / exploratory*
+
+### The core idea
+This is a **rewrite in Kotlin**, not a code port — SwiftUI/CoreBluetooth are
+Apple-only. But the *behaviour* is already proven and documented in `CLAUDE.md`
+(UUIDs, CR+LF, paced password, login banner, command set, presets, report
+parsing). Re-expressing known logic in a new language is the manageable part;
+the encoder reverse-engineering (the hard part) is done. Recommendation: a
+**native Android app (Kotlin + Jetpack Compose)**, kept as a sibling to the iOS
+app rather than replacing it with a cross-platform framework — the encoder's
+timing-sensitive quirks want native BLE control.
+
+### iOS → Android mapping
+| iOS (this app) | Android equivalent |
+|---|---|
+| SwiftUI | Jetpack Compose |
+| `BLEManager: ObservableObject` + `@Published` | `ViewModel` + `StateFlow` |
+| `@EnvironmentObject` | shared `ViewModel` (or Hilt DI) |
+| CoreBluetooth `CBCentralManager` | `BluetoothLeScanner` + `BluetoothGatt` |
+| `Report.swift` (UIGraphicsPDFRenderer + CoreText) | `android.graphics.pdf.PdfDocument` + `Canvas` |
+| `ShareSheet` / `UIActivityViewController` | `Intent.ACTION_SEND` + `FileProvider` |
+| Keychain (password list) | `EncryptedSharedPreferences` (Jetpack Security) |
+| Documents dir (report history) | app-specific `filesDir` / `MediaStore` |
+| `Haptics` (`UIImpactFeedbackGenerator`) | `Vibrator` / `VibrationEffect` |
+| `Info.plist` usage strings | `AndroidManifest.xml` + runtime permission prompts |
+| `Assets.xcassets` app icon | `res/mipmap` adaptive icon |
+| Xcode / XcodeGen | Android Studio / Gradle |
+| deployment target iOS 17 | `minSdk` (≈ API 28) / `targetSdk` latest |
+
+### BLE specifics (where Android differs and bites)
+- **Permissions.** Android 12+ needs runtime `BLUETOOTH_SCAN` +
+  `BLUETOOTH_CONNECT`; declare `BLUETOOTH_SCAN` with
+  `android:usesPermissionFlags="neverForLocation"` to scan without location.
+  Pre-12 needs `BLUETOOTH`, `BLUETOOTH_ADMIN`, and `ACCESS_FINE_LOCATION`.
+- **Scan.** `startScan` with no service filter (encoder doesn't advertise its
+  UUID); match by `ScanResult.device.name` — same strategy as iOS.
+- **Enable notifications = two steps.** Unlike iOS, you must
+  `setCharacteristicNotification(true)` **and** write `0x00002902` (CCCD)
+  descriptor with `ENABLE_NOTIFICATION_VALUE`.
+- **Serialized GATT ops.** Android requires you to wait for each
+  `onCharacteristicWrite` callback before the next write — which actually maps
+  cleanly onto our existing serial-write queue. The ~35 ms password pacing
+  becomes "wait for the write callback, then small delay". Re-tune on-device.
+- **Write type.** transparent-UART char is write+notify; pick
+  `WRITE_TYPE_DEFAULT` vs `NO_RESPONSE` as on iOS.
+- Default MTU (23) is fine for the short command lines.
+
+### Dev environment & devices (important — read before the weekend)
+- **No Mac needed.** Android Studio runs on Windows/Linux/Mac. Free.
+- **The emulator has no Bluetooth** — exactly like the iOS Simulator. So a real
+  Android phone is required to test anything past the UI.
+- **Locked-down work phones (MDM) are usually a blocker.** Managed devices often
+  disable Developer Options / USB debugging / sideloading entirely. Plan to
+  develop and test on a **personal or spare Android device**. Deploying the
+  finished app to managed work phones would go through the org's MDM / managed
+  Google Play, not sideloading.
+
+### Getting it on a device
+1. Android Studio → enable **Developer Options + USB debugging** on the phone →
+   **Run** (installs like Xcode's Run button).
+2. Or build an **APK** and sideload: transfer the file, allow "install unknown
+   apps", tap to install. No signing team, no provisioning profile, **no 7-day
+   expiry**.
+3. Wider distribution later: one-time **$25 Google Play** account → internal /
+   closed testing tracks.
+
+### Proof-of-concept scope (first weekend target)
+Smallest end-to-end slice that proves the encoder talks to Android:
+1. New Kotlin + Compose project; add BLE permissions + runtime request.
+2. Scan (no filter) → list devices by name → tap to connect.
+3. `connectGatt` → discover services → find transparent-UART service/char by UUID.
+4. Enable notifications (setNotify + CCCD write).
+5. Serialized paced write of a password (CR+LF, byte-by-byte) on the
+   `Password:` prompt; detect `Welcome to Shire` → "logged in".
+
+If that slice works, the rest (command grids, presets, report) is
+straightforward re-expression of the iOS logic. Everything above stays
+**on-device, no network**, matching iOS.
