@@ -36,7 +36,7 @@ struct ScanView: View {
                 }
             }
         }
-        .tint(.shireTeal)
+        .tint(.shjBlue)
     }
 }
 
@@ -48,11 +48,11 @@ struct DeviceRow: View {
     var body: some View {
         HStack(spacing: 14) {
             IconBadge(systemImage: likely ? "star.fill" : "dot.radiowaves.left.and.right",
-                      tint: likely ? .shireGreen : .shireTeal, size: 44)
+                      tint: likely ? .shjBlue : .shjGray, size: 44)
             VStack(alignment: .leading, spacing: 3) {
                 Text(dev.name).font(.headline).foregroundStyle(.primary)
                 Text(likely ? "Likely encoder" : String(dev.id.uuidString.prefix(8)) + "…")
-                    .font(.caption).foregroundStyle(likely ? Color.shireGreen : Color.secondary)
+                    .font(.caption).foregroundStyle(likely ? Color.shjBlue : Color.secondary)
             }
             Spacer()
             VStack(spacing: 2) {
@@ -63,6 +63,6 @@ struct DeviceRow: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .cardSurface(likely ? .shireGreen : .shireTeal, radius: 16)
+        .cardSurface(likely ? .shjBlue : .shjGray, radius: 16)
     }
 }

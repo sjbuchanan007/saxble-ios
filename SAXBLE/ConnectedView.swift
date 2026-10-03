@@ -6,14 +6,14 @@ struct ConnectedView: View {
 
     var body: some View {
         TabView {
-            CommandGridTab(category: SAXCommands.gasCategory, tint: .orange)
+            CommandGridTab(category: SAXCommands.gasCategory, tint: .shjBlue)
                 .tabItem { Label("Gas", systemImage: "flame.fill") }
-            CommandGridTab(category: SAXCommands.generalCategory, tint: .shireTeal)
+            CommandGridTab(category: SAXCommands.generalCategory, tint: .shjGray)
                 .tabItem { Label("General", systemImage: "gearshape.2.fill") }
             PresetsTab().tabItem { Label("Presets", systemImage: "wand.and.stars") }
             ConsoleTab().tabItem { Label("Console", systemImage: "terminal") }
         }
-        .tint(.shireTeal)
+        .tint(.shjBlue)
         .alert("Password not saved correctly", isPresented: Binding(
             get: { ble.passwordWarning != nil },
             set: { if !$0 { ble.passwordWarning = nil } })) {
@@ -27,9 +27,10 @@ struct ConnectedView: View {
 // MARK: - Theme & shared layout
 
 extension Color {
-    /// Shire Controls brand colours (from the logo).
-    static let shireTeal  = Color(red: 0.05, green: 0.44, blue: 0.49)
-    static let shireGreen = Color(red: 0.55, green: 0.78, blue: 0.25)
+    /// SHJ brand colours (from the SHJ Medical & Lab Gas Specialists logo).
+    static let shjBlue     = Color(red: 0.00, green: 0.627, blue: 0.863)   // ~#00A0DC
+    static let shjBlueDark = Color(red: 0.00, green: 0.443, blue: 0.659)   // ~#0071A8
+    static let shjGray     = Color(red: 0.612, green: 0.620, blue: 0.631)  // ~#9C9EA1
 }
 
 /// Two equal, comfortably spaced columns used by the card grids.
@@ -41,7 +42,7 @@ struct BrandNavBar: ViewModifier {
         content
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(
-                LinearGradient(colors: [.shireTeal, .shireGreen],
+                LinearGradient(colors: [.shjBlue, .shjBlueDark],
                                startPoint: .leading, endPoint: .trailing),
                 for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
@@ -244,7 +245,7 @@ struct CommandDetailView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .tint(cmd.destructive ? .red : .shireTeal)
+                .tint(cmd.destructive ? .red : .shjBlue)
                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                 .listRowBackground(Color.clear)
             }

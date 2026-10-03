@@ -37,6 +37,9 @@ struct CommissioningData {
 
 enum Report {
 
+    /// SHJ brand blue for report headings (fixed colour — prints and survives dark mode).
+    private static let brandBlue = UIColor(red: 0.0, green: 0.627, blue: 0.863, alpha: 1)
+
     private static let gasKeys: Set<String> = [
         "Gas Type", "Bottle Color", "Pressure", "High Alarm", "Low Alarm",
         "Drop Alarm", "Hi_Diff", "Lo_Diff", "Pd_Diff", "Display", "Units",
@@ -148,8 +151,8 @@ enum Report {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("SAXBLE-\(slug(loc))-\(df.string(from: now)).pdf")
 
-        // Optional letterhead logo (add a "shire-logo" image to the app to use).
-        let logo = UIImage(named: "shire-logo")
+        // Optional letterhead logo (add an "shj-logo" image to the app to use).
+        let logo = UIImage(named: "shj-logo")
 
         let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
         do {
@@ -214,7 +217,7 @@ enum Report {
         let df = DateFormatter(); df.dateFormat = "dd/MM/yyyy HH:mm"
         let out = NSMutableAttributedString()
 
-        out.append(line("SAXBLE Commissioning Report\n", .boldSystemFont(ofSize: 18)))
+        out.append(line("SAXBLE Commissioning Report\n", .boldSystemFont(ofSize: 18), brandBlue))
         out.append(line("\(data.setting("Location") ?? fallbackName)   ·   \(df.string(from: date))\n\n",
                         .systemFont(ofSize: 10), .darkGray))
 
@@ -234,7 +237,7 @@ enum Report {
         }
 
         // Gas table. ± columns are the alarm differentials (hysteresis).
-        out.append(line("\nGas Channels\n", .boldSystemFont(ofSize: 13)))
+        out.append(line("\nGas Channels\n", .boldSystemFont(ofSize: 13), brandBlue))
         let cols = [("Ch", 3), ("Type", 6), ("Pressure", 10), ("High", 10), ("Hi±", 6),
                     ("Low", 10), ("Lo±", 6), ("Drop", 10), ("Pd±", 6), ("Display", 18)]
         var table = row(cols) + "\n"
@@ -266,7 +269,7 @@ enum Report {
                         .systemFont(ofSize: 8), .darkGray))
 
         // System settings
-        out.append(line("\nSystem Settings\n", .boldSystemFont(ofSize: 13)))
+        out.append(line("\nSystem Settings\n", .boldSystemFont(ofSize: 13), brandBlue))
         let order = ["Modbus Addr", "Modbus speed", "Tone Type", "Screen saver",
                      "Mute timer", "Logout Time", "Log Time", "EEPROM",
                      "Bluetooth Ver", "Build"]
@@ -282,7 +285,7 @@ enum Report {
 
     private static func transcriptDocument(_ transcript: String) -> NSAttributedString {
         let out = NSMutableAttributedString()
-        out.append(line("Console Transcript\n\n", .boldSystemFont(ofSize: 13)))
+        out.append(line("Console Transcript\n\n", .boldSystemFont(ofSize: 13), brandBlue))
         out.append(line(transcript, .monospacedSystemFont(ofSize: 8, weight: .regular)))
         return out
     }

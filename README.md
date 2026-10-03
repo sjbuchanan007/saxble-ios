@@ -79,14 +79,16 @@ your **Team**, plug in your iPhone, and **Run**.
 
 ## Report letterhead logo
 The PDF commissioning report draws a logo at the top of the first page if the
-app contains an image named **`shire-logo`**. To add it:
+app contains an image named **`shj-logo`**. To add it:
 
-- **XcodeGen / loose file:** drop `shire-logo.png` into the `SAXBLE/` folder and
+- **XcodeGen / loose file:** drop `shj-logo.png` into the `SAXBLE/` folder and
   re-run `xcodegen generate` (it's bundled automatically), **or**
 - **Asset catalog:** add the PNG to `Assets.xcassets` as an image set named
-  `shire-logo`.
+  `shj-logo`.
 
 If no such image is present the report simply omits the logo — no error.
+Use a transparent-background PNG (it's drawn on white). The report headings use
+the SHJ brand blue to match.
 
 ## App icon
 `SAXBLE/Assets.xcassets/AppIcon.appiconset` ships a brand-coloured placeholder

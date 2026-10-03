@@ -69,7 +69,7 @@ struct PresetsTab: View {
                                 BigCard(title: preset.name,
                                         subtitle: "\(preset.steps.count) steps",
                                         systemImage: "wand.and.stars",
-                                        tint: .shireGreen,
+                                        tint: .shjBlueDark,
                                         enabled: ble.loggedIn)
                             }
                             .buttonStyle(PressableCardStyle())

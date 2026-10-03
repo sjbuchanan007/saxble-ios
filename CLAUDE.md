@@ -51,7 +51,8 @@ ports that proven behaviour to SwiftUI + CoreBluetooth.
 ## Done
 - **PDF commissioning report** export (`Report.swift`): structured summary
   (logo + gas/alarm table + settings) plus appended transcript, named by
-  location + date. Add a `shire-logo` image to brand the header.
+  location + date. Add an `shj-logo` image to brand the header. App is themed
+  in the SHJ brand colours (blue `#00A0DC` + gray).
 
 ## Not done yet / ideas
 See `ROADMAP.md` for detailed requirements on the first two.
