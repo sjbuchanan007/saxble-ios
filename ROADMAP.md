@@ -274,6 +274,8 @@ Flag to IT early that the app needs **Bluetooth scan/connect permissions**, whic
 some MDM policies gate.
 
 ### Proof-of-concept scope (first weekend target)
+Starter code is in **`android-poc/`** (Encoder/BleManager/MainActivity + manifest
+permissions + README). Branding is neutral (**SHJ, no Shire logo**).
 Smallest end-to-end slice that proves the encoder talks to Android:
 1. New Kotlin + Compose project; add BLE permissions + runtime request.
 2. Scan (no filter) → list devices by name → tap to connect.
