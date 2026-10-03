@@ -26,6 +26,7 @@ enum Presets {
         .command("password MMSmms659"),
         .promptLocation,
         .command("gas a list"),
+        .command("settings"),
     ]
 
     /// 3-gas panel: O2 (1), Medical Air (2), Vacuum (3); gases 4, 5, 6 disabled.
@@ -40,6 +41,7 @@ enum Presets {
         .command("password MMSmms659"),
         .promptLocation,
         .command("gas a list"),
+        .command("settings"),
     ]
 
     static let all: [Preset] = [

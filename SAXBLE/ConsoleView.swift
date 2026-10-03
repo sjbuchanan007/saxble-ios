@@ -5,6 +5,8 @@ import SwiftUI
 struct ConsoleTab: View {
     @EnvironmentObject var ble: BLEManager
     @State private var entry = ""
+    @FocusState private var entryFocused: Bool
+    @State private var share: ShareItem?
 
     var body: some View {
         NavigationStack {
@@ -31,6 +33,8 @@ struct ConsoleTab: View {
                     TextField("raw command", text: $entry)
                         .textFieldStyle(.roundedBorder)
                         .autocorrectionDisabled().textInputAutocapitalization(.never)
+                        .focused($entryFocused)
+                        .submitLabel(.send)
                         .onSubmit(sendRaw)
                     Button("Send", action: sendRaw).disabled(entry.isEmpty)
                 }
@@ -40,12 +44,30 @@ struct ConsoleTab: View {
             .toolbar {
                 AuthToolbar()
                 ToolbarItem(placement: .topBarLeading) {
-                    ShareLink(item: ble.transcript(),
-                              preview: SharePreview("SAXBLE session")) {
+                    Menu {
+                        Button {
+                            let rx = ble.log.filter { $0.kind == .rx }.map(\.text)
+                            if let url = Report.commissioningPDF(
+                                rxLines: rx,
+                                transcript: ble.transcript(),
+                                fallbackName: ble.peerName.isEmpty ? "encoder" : ble.peerName) {
+                                share = ShareItem(items: [url])
+                            }
+                        } label: { Label("Export PDF report", systemImage: "doc.richtext") }
+                        Button {
+                            share = ShareItem(items: [ble.transcript()])
+                        } label: { Label("Share transcript (text)", systemImage: "doc.plaintext") }
+                    } label: {
                         Image(systemName: "square.and.arrow.up")
                     }
                 }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { entryFocused = false }
+                }
             }
+            .sheet(item: $share) { ShareSheet(items: $0.items) }
+            .brandNavBar()
         }
     }
 
@@ -53,7 +75,9 @@ struct ConsoleTab: View {
         let line = entry.trimmingCharacters(in: .whitespaces)
         guard !line.isEmpty else { return }
         ble.send(line)
+        Haptics.tap()
         entry = ""
+        entryFocused = false
     }
 
     private func color(for kind: LogLine.Kind) -> Color {

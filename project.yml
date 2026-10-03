@@ -23,6 +23,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.saxble
         INFOPLIST_FILE: SAXBLE/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1,2"   # iPhone + iPad
         SWIFT_VERSION: "5.0"
         MARKETING_VERSION: "0.1.0"

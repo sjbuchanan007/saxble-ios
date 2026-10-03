@@ -29,4 +29,9 @@ enum Encoder {
     /// A single bulk write drops the last password character on this encoder, so
     /// the password is sent one byte at a time with this gap (mimics typing).
     static let slowByteGap: TimeInterval = 0.035
+
+    /// Extra pause after the last content byte, before the CR+LF, on paced
+    /// sends. The encoder tends to drop the final character if the terminator
+    /// treads on its heels — this gives it time to commit.
+    static let slowTerminatorGap: TimeInterval = 0.12
 }

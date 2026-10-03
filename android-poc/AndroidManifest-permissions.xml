@@ -1,0 +1,18 @@
+<!-- Merge these into the generated AndroidManifest.xml, INSIDE <manifest ...>
+     but ABOVE the <application> tag. -->
+
+<!-- Android 12+ (API 31+): runtime Bluetooth permissions.
+     neverForLocation tells the system we don't use BLE to derive location,
+     so we don't need the location permission on modern Android. -->
+<uses-permission
+    android:name="android.permission.BLUETOOTH_SCAN"
+    android:usesPermissionFlags="neverForLocation" />
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+<!-- Android 11 and below: old Bluetooth perms + location (required to scan). -->
+<uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
+
+<!-- Require BLE hardware. -->
+<uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />

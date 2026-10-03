@@ -118,8 +118,8 @@ enum SAXCommands {
         CommandDef("gen_gashelp", "Gas help (list)", "help gas", false, .none, nil, [], "List gas commands"),
     ]
 
-    static let categories: [CommandCategory] = [
-        CommandCategory(id: "gas", title: "Gas Settings", commands: gas),
-        CommandCategory(id: "general", title: "General Settings", commands: general),
-    ]
+    static let gasCategory = CommandCategory(id: "gas", title: "Gas Settings", commands: gas)
+    static let generalCategory = CommandCategory(id: "general", title: "General Settings", commands: general)
+
+    static let categories: [CommandCategory] = [gasCategory, generalCategory]
 }

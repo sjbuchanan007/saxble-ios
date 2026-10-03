@@ -49,7 +49,17 @@ final class BLEManager: NSObject, ObservableObject {
     // we resend the same value (slowly) when we see that prompt.
     private var pendingRetype: String?
 
-    private let slowQueue = DispatchQueue(label: "saxble.slowwrite")
+    // After a password change we read `settings` back and check the encoder
+    // stored what we sent (it sometimes drops the last character). `passwordWarning`
+    // is surfaced to the UI when the stored value doesn't match.
+    @Published var passwordWarning: String?
+    private var expectedPassword: String?
+    private var verifyingPassword = false
+
+    // All writes funnel through this single serial queue so a paced
+    // (byte-by-byte) password can never interleave with a bulk command write.
+    // Interleaved bytes reach the encoder as garbage and it rejects the login.
+    private let writeQueue = DispatchQueue(label: "saxble.write")
 
     override init() {
         super.init()
@@ -63,9 +73,9 @@ final class BLEManager: NSObject, ObservableObject {
         devices.removeAll()
         phase = .scanning
         // Encoder doesn't advertise its service UUID, so scan for everything and
-        // let the user pick (the name hint floats a likely match to the top).
-        central.scanForPeripherals(withServices: nil,
-            options: [CBCentralManagerScanOptionAllowDuplicatesKey: true])
+        // let the user pick. Duplicates are OFF so the list doesn't churn on
+        // every advertising packet (which made rows jump and impossible to tap).
+        central.scanForPeripherals(withServices: nil, options: nil)
     }
 
     func connect(_ device: DiscoveredDevice) {
@@ -78,6 +88,18 @@ final class BLEManager: NSObject, ObservableObject {
 
     func disconnect() {
         if let p = peripheral { central.cancelPeripheralConnection(p) }
+    }
+
+    /// Log out of the encoder console, then drop the BLE link so the UI returns
+    /// to the scan screen. The `logout` command clears the encoder's session;
+    /// disconnecting flips `phase` back to `.scanning` via the delegate.
+    func logout() {
+        if writeChar != nil { send("logout") }
+        loggedIn = false
+        // Let the logout bytes flush before we tear down the connection.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+            self?.disconnect()
+        }
     }
 
     /// Mark that the next "Y or N" prompt should be auto-answered "Y".
@@ -99,30 +121,40 @@ final class BLEManager: NSObject, ObservableObject {
     /// Send a command line; the configured CR+LF is appended automatically.
     func send(_ line: String) {
         // A "password <new>" line is rate-sensitive like the login prompt, so
-        // always pace it. Everything else can go as a single write.
-        if line.lowercased().hasPrefix("password ") { sendSlow(line); return }
-        guard let p = peripheral, let c = writeChar else { return }
-        rememberRetype(line)
-        info(tx: line)
-        let payload = line + Encoder.lineEnding
-        let type: CBCharacteristicWriteType =
-            c.properties.contains(.writeWithoutResponse) ? .withoutResponse : .withResponse
-        p.writeValue(Data(payload.utf8), for: c, type: type)
+        // pace it; everything else goes out back-to-back (but still serialised).
+        let paced = line.lowercased().hasPrefix("password ")
+        enqueueWrite(line, paced: paced)
     }
 
-    /// Send one byte at a time with a small gap — needed for the password
+    /// Send a line one byte at a time with a small gap — needed for the password
     /// prompt, which drops characters from a single bulk write.
     func sendSlow(_ line: String) {
+        enqueueWrite(line, paced: true)
+    }
+
+    /// Queue a write on the serial pipeline. `paced` inserts the slow per-byte
+    /// gap (password prompt); otherwise the bytes go out back-to-back. Either
+    /// way the whole line is written before the next queued line begins, so a
+    /// paced password can never interleave with a command and get garbled.
+    private func enqueueWrite(_ line: String, paced: Bool) {
         guard let p = peripheral, let c = writeChar else { return }
         rememberRetype(line)
         info(tx: line)
-        let bytes = Array((line + Encoder.lineEnding).utf8)
+        let content = Array(line.utf8)
+        let terminator = Array(Encoder.lineEnding.utf8)
         let type: CBCharacteristicWriteType =
             c.properties.contains(.writeWithoutResponse) ? .withoutResponse : .withResponse
-        slowQueue.async {
-            for b in bytes {
+        let gap = paced ? Encoder.slowByteGap : 0
+        writeQueue.async {
+            for b in content {
                 DispatchQueue.main.async { p.writeValue(Data([b]), for: c, type: type) }
-                Thread.sleep(forTimeInterval: Encoder.slowByteGap)
+                if gap > 0 { Thread.sleep(forTimeInterval: gap) }
+            }
+            // Let the encoder commit the final character before the terminator.
+            if paced { Thread.sleep(forTimeInterval: Encoder.slowTerminatorGap) }
+            for b in terminator {
+                DispatchQueue.main.async { p.writeValue(Data([b]), for: c, type: type) }
+                if gap > 0 { Thread.sleep(forTimeInterval: gap) }
             }
         }
     }
@@ -135,7 +167,17 @@ final class BLEManager: NSObject, ObservableObject {
         let parts = line.split(separator: " ", maxSplits: 1)
         if parts.count == 2, parts[0].lowercased() == "password" {
             pendingRetype = String(parts[1])
+            expectedPassword = String(parts[1])   // verified after "updated"
         }
+    }
+
+    /// Pull the value out of a settings echo line: `Password:      "value"`.
+    /// Returns nil for the bare `Password:` login prompt (no quotes).
+    private static func parseStoredPassword(_ line: String) -> String? {
+        guard line.lowercased().hasPrefix("password:"),
+              let open = line.firstIndex(of: "\""),
+              let close = line.lastIndex(of: "\""), open < close else { return nil }
+        return String(line[line.index(after: open)..<close])
     }
 
     private func info(_ text: String) { append(.init(kind: .info, text: text)) }
@@ -159,7 +201,23 @@ final class BLEManager: NSObject, ObservableObject {
             }
             return
         }
-        if line.contains(Encoder.loginMarker) { loggedIn = true; return }
+        if line.contains(Encoder.loginMarker) { loggedIn = true; Haptics.success(); return }
+
+        // Verify a just-changed password against the encoder's settings echo.
+        if verifyingPassword, let want = expectedPassword,
+           let stored = Self.parseStoredPassword(line) {
+            verifyingPassword = false
+            expectedPassword = nil
+            if stored == want {
+                info("OK - password verified, encoder stored it correctly")
+            } else {
+                let msg = "WARNING - password mismatch: you set \"\(want)\" but the encoder stored \"\(stored)\". It dropped a character; change the password again to be safe."
+                info(msg)
+                passwordWarning = msg
+                Haptics.warning()
+            }
+            return
+        }
 
         // "Retype password" → resend the same value slowly, then forget it.
         if lower.contains("retype"), let pw = pendingRetype {
@@ -168,7 +226,19 @@ final class BLEManager: NSObject, ObservableObject {
             }
             return
         }
-        if lower.contains("password updated") { info("password updated successfully"); pendingRetype = nil; return }
+        if lower.contains("password updated") {
+            info("password updated successfully")
+            pendingRetype = nil
+            Haptics.success()
+            // Read it back to confirm the encoder didn't drop the last character.
+            if expectedPassword != nil {
+                verifyingPassword = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+                    self?.send("settings")
+                }
+            }
+            return
+        }
 
         let isPrompt = lower.contains("password") && line.hasSuffix(":")
         let isInvalid = lower.contains("invalid password")
@@ -214,14 +284,20 @@ extension BLEManager: CBCentralManagerDelegate {
         let dev = DiscoveredDevice(id: peripheral.identifier, name: name,
                                    rssi: RSSI.intValue, peripheral: peripheral)
         if let i = devices.firstIndex(where: { $0.id == dev.id }) {
-            devices[i].rssi = dev.rssi
-        } else {
-            devices.append(dev)
+            devices[i].rssi = dev.rssi   // refresh signal in place, no reorder
+            return
         }
-        // Likely encoder first, then strongest signal.
+        devices.append(dev)
+        // Stable order so rows don't jump while you're trying to tap one:
+        // likely encoder first, then named devices before "(unknown)", then
+        // alphabetical. Deliberately NOT sorted by RSSI (it jitters constantly).
         devices.sort {
-            let a = $0.name == Encoder.nameHint, b = $1.name == Encoder.nameHint
-            return a != b ? a : $0.rssi > $1.rssi
+            let aHint = $0.name == Encoder.nameHint, bHint = $1.name == Encoder.nameHint
+            if aHint != bHint { return aHint }
+            let aNamed = $0.name != "(unknown)", bNamed = $1.name != "(unknown)"
+            if aNamed != bNamed { return aNamed }
+            if $0.name != $1.name { return $0.name < $1.name }
+            return $0.id.uuidString < $1.id.uuidString
         }
     }
 
