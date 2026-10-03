@@ -249,6 +249,30 @@ timing-sensitive quirks want native BLE control.
 3. Wider distribution later: one-time **$25 Google Play** account → internal /
    closed testing tracks.
 
+### Pre-handset prep checklist (can be done before any device arrives)
+- Install **Android Studio** (free; Windows/Linux/Mac — no Mac needed). Let it
+  install the SDK, **platform-tools** (`adb`), and an emulator.
+- Create a throwaway **Empty Compose Activity** project and run it on the
+  **emulator** to confirm the toolchain. (Emulator has **no Bluetooth** — UI /
+  sanity only; the encoder needs a real device.)
+- Learn the three Xcode-equivalents: **Run** button, **Logcat** (= Xcode
+  console), **Device Manager** (run-target list).
+- Ready the **logo** PNG and an **app icon** (Android adaptive icon = fore/back
+  layers; a square PNG works to start).
+- Confirm the incoming handset is **not itself MDM-locked** (so Developer Options
+  can be enabled), note its **Android version**, and that it has Bluetooth.
+
+### Enterprise distribution (company pushes to managed devices)
+The deliverable for fleet deployment is a **signed APK/AAB** (built with a
+release **keystore** kept safe — a debug build can't be distributed). IT deploys
+remotely via their **MDM/EMM** (Intune, Workspace ONE, SOTI, …):
+1. **Direct APK upload to the MDM** as a line-of-business app (simplest — hand IT
+   one signed `.apk`), or
+2. **Private app via Managed Google Play** (Android Enterprise): upload once,
+   restrict to the org, IT pushes it (needs the $25 Play Console account).
+Flag to IT early that the app needs **Bluetooth scan/connect permissions**, which
+some MDM policies gate.
+
 ### Proof-of-concept scope (first weekend target)
 Smallest end-to-end slice that proves the encoder talks to Android:
 1. New Kotlin + Compose project; add BLE permissions + runtime request.
