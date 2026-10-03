@@ -16,10 +16,23 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+/** SHJ brand palette (matches the iOS app). */
+private val ShjBlue = Color(0xFF00A0DC)
+private val ShjBlueDark = Color(0xFF0071A8)
+private val ShjGray = Color(0xFF9C9EA1)
+
+private val ShjColors = lightColorScheme(
+    primary = ShjBlue,
+    onPrimary = Color.White,
+    secondary = ShjBlueDark,
+    tertiary = ShjGray,
+)
 
 /**
  * One-screen proof-of-concept UI: request BLE permissions, scan, tap a device to
@@ -32,7 +45,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ble = BleManager(applicationContext)
-        setContent { MaterialTheme { AppScreen(ble) } }
+        setContent { MaterialTheme(colorScheme = ShjColors) { AppScreen(ble) } }
     }
 }
 
@@ -59,7 +72,7 @@ fun AppScreen(ble: BleManager) {
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            Text("SAXBLE (SHJ)", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            Text("SAXBLE (SHJ)", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = ShjBlue)
             Spacer(Modifier.weight(1f))
             Text(if (loggedIn) "AUTH" else "— no auth",
                 color = if (loggedIn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
