@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
@@ -34,11 +35,6 @@ private val ShjColors = lightColorScheme(
     tertiary = ShjGray,
 )
 
-/**
- * One-screen proof-of-concept UI: request BLE permissions, scan, tap a device to
- * connect, watch the console log, and see AUTH light up when "Welcome to Shire"
- * arrives. Branding kept neutral (SHJ) — no logo.
- */
 class MainActivity : ComponentActivity() {
     private lateinit var ble: BleManager
 
@@ -69,13 +65,16 @@ fun AppScreen(ble: BleManager) {
     val devices by ble.devices.collectAsState()
     val logLines by ble.log.collectAsState()
     val loggedIn by ble.loggedIn.collectAsState()
+    var cmd by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text("SAXBLE (SHJ)", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = ShjBlue)
             Spacer(Modifier.weight(1f))
-            Text(if (loggedIn) "AUTH" else "— no auth",
-                color = if (loggedIn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
+            Text(
+                if (loggedIn) "AUTH" else "— no auth",
+                color = if (loggedIn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+            )
         }
         Spacer(Modifier.height(8.dp))
 
@@ -94,19 +93,22 @@ fun AppScreen(ble: BleManager) {
         Text("Devices", fontWeight = FontWeight.SemiBold)
         LazyColumn(Modifier.weight(1f)) {
             items(devices) { d ->
-                Column(Modifier.fillMaxWidth().clickable { ble.connect(d.device) }.padding(vertical = 8.dp)) {
+                Column(
+                    Modifier.fillMaxWidth().clickable { ble.connect(d.device) }.padding(vertical = 8.dp)
+                ) {
                     Text(d.name, fontWeight = FontWeight.Medium)
-                    Text("${d.address}   ${d.rssi} dBm", fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.outline)
+                    Text(
+                        "${d.address}   ${d.rssi} dBm",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.outline
+                    )
                 }
             }
         }
 
         Spacer(Modifier.height(12.dp))
         Text("Console", fontWeight = FontWeight.SemiBold)
-
-        var cmd by remember { mutableStateOf("") }
-        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = cmd,
                 onValueChange = { cmd = it },
