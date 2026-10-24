@@ -267,6 +267,7 @@ class BleManager(private val context: Context) {
     // ---- Logging ----------------------------------------------------------
 
     private fun info(s: String) {
+        android.util.Log.d("SAXBLE", s)   // also to Logcat (selectable/copyable)
         main.post { log.value = (log.value + s).takeLast(500) }
     }
 }
