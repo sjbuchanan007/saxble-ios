@@ -104,6 +104,22 @@ fun AppScreen(ble: BleManager) {
 
         Spacer(Modifier.height(12.dp))
         Text("Console", fontWeight = FontWeight.SemiBold)
+
+        var cmd by remember { mutableStateOf("") }
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = cmd,
+                onValueChange = { cmd = it },
+                singleLine = true,
+                label = { Text("raw command (e.g. location TEST1)") },
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(8.dp))
+            Button(
+                onClick = { if (cmd.isNotBlank()) { ble.send(cmd.trim()); cmd = "" } },
+                enabled = phase == BleManager.Phase.CONNECTED
+            ) { Text("Send") }
+        }
         Column(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
         ) {

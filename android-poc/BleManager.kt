@@ -37,6 +37,10 @@ class BleManager(private val context: Context) {
     val log = MutableStateFlow<List<String>>(emptyList())
     val loggedIn = MutableStateFlow(false)
 
+    /** When true, the scan logs a full advertisement dump per device (for
+     *  reverse-engineering a scan filter). */
+    var diagnostics = true
+
     private val main = Handler(Looper.getMainLooper())
     private val adapter =
         (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
@@ -88,13 +92,38 @@ class BleManager(private val context: Context) {
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val dev = result.device
-            val name = dev.name ?: result.scanRecord?.deviceName ?: "(unknown)"
-            val fd = FoundDevice(name, dev.address, result.rssi, dev)
+            val rec = result.scanRecord
+            val localName = rec?.deviceName        // from advertisement / scan response
+            val gapName = dev.name                 // GAP device name (may be null until connected)
+            val name = localName ?: gapName ?: "(unknown)"
             val isNew = !found.containsKey(dev.address)
-            found[dev.address] = fd
-            if (isNew) publishDevices()  // update signal in place, don't reorder constantly
+            found[dev.address] = FoundDevice(name, dev.address, result.rssi, dev)
+            if (isNew) {
+                publishDevices()
+                // Diagnostic: dump exactly what each device broadcasts, so we can
+                // work out a reliable scan filter (e.g. a "Shire" prefix) without
+                // guessing — and compare before/after renaming the encoder.
+                if (diagnostics) info(describeAdv(result, localName, gapName))
+            }
         }
         override fun onScanFailed(errorCode: Int) { info("scan failed: $errorCode") }
+    }
+
+    /** One-line dump of a device's advertisement for reverse-engineering. */
+    private fun describeAdv(result: ScanResult, localName: String?, gapName: String?): String {
+        val rec = result.scanRecord
+        val svc = rec?.serviceUuids
+            ?.joinToString(",") { it.uuid.toString().substring(0, 8) } ?: "-"
+        val mfg = StringBuilder()
+        rec?.manufacturerSpecificData?.let { data ->
+            for (i in 0 until data.size()) {
+                val id = data.keyAt(i)
+                val bytes = data.valueAt(i).joinToString("") { "%02X".format(it) }
+                mfg.append("0x%04X:".format(id)).append(bytes).append(' ')
+            }
+        }
+        return "ADV local='${localName ?: "-"}' gap='${gapName ?: "-"}' " +
+            "svc=$svc mfg=${if (mfg.isBlank()) "-" else mfg.trim()} rssi=${result.rssi}"
     }
 
     private fun publishDevices() {
