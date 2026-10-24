@@ -326,10 +326,16 @@ object Report {
         s.map { if (it.isLetterOrDigit()) it else '-' }.joinToString("")
             .split("-").filter { it.isNotEmpty() }.joinToString("-").ifEmpty { "encoder" }
 
-    /** Load an "shj_logo" drawable for the letterhead, or null if not present. */
+    /** Load the letterhead logo: assets/shj_logo.png first, else an shj_logo
+     *  drawable. Returns null if neither exists. */
     private fun loadLogo(context: Context): Bitmap? {
+        try {
+            context.assets.open("shj_logo.png").use { return BitmapFactory.decodeStream(it) }
+        } catch (_: Exception) { /* no asset — try a drawable */ }
         val id = context.resources.getIdentifier("shj_logo", "drawable", context.packageName)
-        if (id == 0) return null
-        return try { BitmapFactory.decodeResource(context.resources, id) } catch (e: Exception) { null }
+        if (id != 0) {
+            try { return BitmapFactory.decodeResource(context.resources, id) } catch (_: Exception) {}
+        }
+        return null
     }
 }
