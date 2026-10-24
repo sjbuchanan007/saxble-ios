@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Create this file at: app/src/main/res/xml/file_paths.xml
+     (right-click res → New → Android Resource Directory → type "xml", then add
+     this file). It lets FileProvider share PDFs from the app's cache. -->
+<paths>
+    <cache-path name="reports" path="reports/" />
+</paths>

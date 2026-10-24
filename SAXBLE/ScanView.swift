@@ -4,35 +4,56 @@ import SwiftUI
 /// Location name; a likely match is floated to the top).
 struct ScanView: View {
     @EnvironmentObject var ble: BLEManager
+    @State private var manualPassword = ""
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    ForEach(ble.devices) { dev in
-                        Button { ble.connect(dev) } label: {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(dev.name).font(.headline)
-                                    Text(dev.id.uuidString.prefix(8) + "…")
-                                        .font(.caption).foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                Text("\(dev.rssi) dBm")
-                                    .font(.subheadline).foregroundStyle(.secondary)
-                                if dev.name == Encoder.nameHint {
-                                    Image(systemName: "star.fill").foregroundStyle(.yellow)
-                                }
-                            }
+            ScrollView {
+                if !ble.status.isEmpty {
+                    Text(ble.status)
+                        .font(.subheadline).fontWeight(.medium)
+                        .foregroundStyle(Color.shjBlue)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16).padding(.top, 8)
+                }
+                if !ble.devices.isEmpty {
+                    VStack(spacing: 6) {
+                        HStack {
+                            Text(ble.phase == .connecting ? "Connecting…" : "Nearby devices")
+                                .font(.footnote).foregroundStyle(.secondary)
+                            Spacer()
+                            Toggle(isOn: $ble.showAll) { Text("Show all").font(.footnote) }
+                                .toggleStyle(.switch)
+                                .fixedSize()
+                        }
+                        if ble.showingAllFallback {
+                            Text("No likely encoders found — showing all devices.")
+                                .font(.caption).foregroundStyle(.orange)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
-                } header: {
-                    Text(ble.phase == .connecting ? "Connecting…" : "Nearby devices")
+                    .padding(.horizontal, 16).padding(.top, 8)
                 }
+                LazyVStack(spacing: 12) {
+                    ForEach(ble.devices) { dev in
+                        Button { Haptics.tap(); ble.connect(dev) } label: { DeviceRow(dev: dev) }
+                            .buttonStyle(PressableCardStyle())
+                    }
+                }
+                .padding(16)
             }
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("SAXBLE")
             .toolbar {
                 Button { ble.startScan() } label: { Image(systemName: "arrow.clockwise") }
+            }
+            .brandNavBar()
+            .alert("Encoder password", isPresented: $ble.needsPassword) {
+                TextField("password", text: $manualPassword)
+                Button("Log in") { ble.submitPassword(manualPassword); manualPassword = "" }
+                Button("Disconnect", role: .cancel) { ble.disconnect(); manualPassword = "" }
+            } message: {
+                Text("The default passwords didn't work. Enter this encoder's password.")
             }
             .overlay {
                 if ble.devices.isEmpty {
@@ -42,5 +63,33 @@ struct ScanView: View {
                 }
             }
         }
+        .tint(.shjBlue)
+    }
+}
+
+/// A single discovered-device card in the scan list.
+struct DeviceRow: View {
+    let dev: DiscoveredDevice
+    private var likely: Bool { dev.likely }
+
+    var body: some View {
+        HStack(spacing: 14) {
+            IconBadge(systemImage: likely ? "star.fill" : "dot.radiowaves.left.and.right",
+                      tint: likely ? .shjBlue : .shjGray, size: 44)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(dev.name).font(.headline).foregroundStyle(.primary)
+                Text(likely ? "Likely encoder" : String(dev.id.uuidString.prefix(8)) + "…")
+                    .font(.caption).foregroundStyle(likely ? Color.shjBlue : Color.secondary)
+            }
+            Spacer()
+            VStack(spacing: 2) {
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .font(.footnote).foregroundStyle(.secondary)
+                Text("\(dev.rssi) dBm").font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface(likely ? .shjBlue : .shjGray, radius: 16)
     }
 }
