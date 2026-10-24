@@ -65,6 +65,8 @@ fun AppScreen(ble: BleManager) {
     val devices by ble.devices.collectAsState()
     val logLines by ble.log.collectAsState()
     val loggedIn by ble.loggedIn.collectAsState()
+    val showAll by ble.showAll.collectAsState()
+    val fallback by ble.showingAllFallback.collectAsState()
     var cmd by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
@@ -90,13 +92,32 @@ fun AppScreen(ble: BleManager) {
         }
 
         Spacer(Modifier.height(12.dp))
-        Text("Devices", fontWeight = FontWeight.SemiBold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Devices", fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.weight(1f))
+            Text("Show all", fontSize = 12.sp)
+            Spacer(Modifier.width(4.dp))
+            Switch(checked = showAll, onCheckedChange = { ble.setShowAll(it) })
+        }
+        if (fallback) {
+            Text(
+                "No likely encoders found — showing all devices.",
+                fontSize = 12.sp, color = MaterialTheme.colorScheme.error
+            )
+        }
         LazyColumn(Modifier.weight(1f)) {
             items(devices) { d ->
                 Column(
                     Modifier.fillMaxWidth().clickable { ble.connect(d.device) }.padding(vertical = 8.dp)
                 ) {
-                    Text(d.name, fontWeight = FontWeight.Medium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(d.name, fontWeight = FontWeight.Medium)
+                        if (d.likely) {
+                            Spacer(Modifier.width(6.dp))
+                            Text("likely encoder", fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
                     Text(
                         "${d.address}   ${d.rssi} dBm",
                         fontSize = 12.sp,

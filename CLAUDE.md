@@ -12,6 +12,13 @@ ports that proven behaviour to SwiftUI + CoreBluetooth.
   write to the writable one.
 - **It does NOT advertise its service UUID** — scan for everything and match by
   the advertised name (the encoder's *Location* string, e.g. `mmssjbt1`).
+  Verified on hardware: the advert carries **only the Location name** — no
+  service UUID and **no manufacturer data**. So there is no constant "Shire"
+  marker, and the name is fully renamable. The scan therefore filters to
+  "**named device + no manufacturer data + no service UUID**" (the bare RN4870
+  signature — rename-proof), floats those to the top, and falls back to showing
+  **all** devices if none match (future firmware might add a manufacturer ID).
+  A `Show all` toggle overrides the filter.
 - **Line ending must be CR+LF (`\r\n`)**. LF-only is rejected; CR-only gets no
   reply. (Cosmetic double prompts `> >` are normal with CRLF.)
 - **Password is rate-sensitive**: a single bulk write drops the last character.

@@ -9,10 +9,22 @@ struct ScanView: View {
         NavigationStack {
             ScrollView {
                 if !ble.devices.isEmpty {
-                    Text(ble.phase == .connecting ? "Connecting…" : "Nearby devices")
-                        .font(.footnote).foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 16).padding(.top, 8)
+                    VStack(spacing: 6) {
+                        HStack {
+                            Text(ble.phase == .connecting ? "Connecting…" : "Nearby devices")
+                                .font(.footnote).foregroundStyle(.secondary)
+                            Spacer()
+                            Toggle(isOn: $ble.showAll) { Text("Show all").font(.footnote) }
+                                .toggleStyle(.switch)
+                                .fixedSize()
+                        }
+                        if ble.showingAllFallback {
+                            Text("No likely encoders found — showing all devices.")
+                                .font(.caption).foregroundStyle(.orange)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    .padding(.horizontal, 16).padding(.top, 8)
                 }
                 LazyVStack(spacing: 12) {
                     ForEach(ble.devices) { dev in
@@ -43,7 +55,7 @@ struct ScanView: View {
 /// A single discovered-device card in the scan list.
 struct DeviceRow: View {
     let dev: DiscoveredDevice
-    private var likely: Bool { dev.name == Encoder.nameHint }
+    private var likely: Bool { dev.likely }
 
     var body: some View {
         HStack(spacing: 14) {

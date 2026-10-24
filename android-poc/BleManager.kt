@@ -29,13 +29,21 @@ class BleManager(private val context: Context) {
 
     enum class Phase { IDLE, SCANNING, CONNECTING, CONNECTED }
 
-    data class FoundDevice(val name: String, val address: String, val rssi: Int, val device: BluetoothDevice)
+    data class FoundDevice(
+        val name: String, val address: String, val rssi: Int,
+        val device: BluetoothDevice, val likely: Boolean
+    )
 
     // Observable state for Compose.
     val phase = MutableStateFlow(Phase.IDLE)
     val devices = MutableStateFlow<List<FoundDevice>>(emptyList())
     val log = MutableStateFlow<List<String>>(emptyList())
     val loggedIn = MutableStateFlow(false)
+
+    /** Show every device, not just likely encoders. */
+    val showAll = MutableStateFlow(false)
+    /** True when the filter found nothing, so we're showing all as a fallback. */
+    val showingAllFallback = MutableStateFlow(false)
 
     /** When true, the scan logs a full advertisement dump per device (for
      *  reverse-engineering a scan filter). */
@@ -87,6 +95,9 @@ class BleManager(private val context: Context) {
 
     fun disconnect() { gatt?.disconnect() }
 
+    /** Toggle between "likely encoders only" and all devices. */
+    fun setShowAll(v: Boolean) { showAll.value = v; publishDevices() }
+
     // ---- Scanning ---------------------------------------------------------
 
     private val scanCallback = object : ScanCallback() {
@@ -96,8 +107,15 @@ class BleManager(private val context: Context) {
             val localName = rec?.deviceName        // from advertisement / scan response
             val gapName = dev.name                 // GAP device name (may be null until connected)
             val name = localName ?: gapName ?: "(unknown)"
+            // The encoder is a bare RN4870 UART module: it advertises a name and
+            // NOTHING else (no manufacturer data, no service UUID). Most consumer
+            // BLE clutter carries one or both, so "named + neither" is a reliable,
+            // rename-proof signature.
+            val noMfg = (rec?.manufacturerSpecificData?.size() ?: 0) == 0
+            val noSvc = rec?.serviceUuids.isNullOrEmpty()
+            val likely = name != "(unknown)" && noMfg && noSvc
             val isNew = !found.containsKey(dev.address)
-            found[dev.address] = FoundDevice(name, dev.address, result.rssi, dev)
+            found[dev.address] = FoundDevice(name, dev.address, result.rssi, dev, likely)
             if (isNew) {
                 publishDevices()
                 // Diagnostic: dump exactly what each device broadcasts, so we can
@@ -127,11 +145,18 @@ class BleManager(private val context: Context) {
     }
 
     private fun publishDevices() {
-        // Named devices first, then by signal — stable enough to tap.
-        val list = found.values.sortedWith(
-            compareByDescending<FoundDevice> { it.name != "(unknown)" }.thenByDescending { it.rssi }
+        val all = found.values.sortedWith(
+            compareByDescending<FoundDevice> { it.likely }.thenByDescending { it.rssi }
         )
-        main.post { devices.value = list }
+        val likelyOnly = all.filter { it.likely }
+        // Show likely encoders; if there are none (e.g. a future firmware adds a
+        // manufacturer ID), fall back to showing everything so nothing is lost.
+        val fallback = likelyOnly.isEmpty() && all.isNotEmpty()
+        val show = if (showAll.value || likelyOnly.isEmpty()) all else likelyOnly
+        main.post {
+            devices.value = show
+            showingAllFallback.value = fallback && !showAll.value
+        }
     }
 
     // ---- GATT -------------------------------------------------------------

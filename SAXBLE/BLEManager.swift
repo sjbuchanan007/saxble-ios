@@ -8,6 +8,9 @@ struct DiscoveredDevice: Identifiable {
     let name: String
     var rssi: Int
     let peripheral: CBPeripheral
+    /// Advertises a name but no manufacturer data and no service UUID — the bare
+    /// RN4870 UART signature the SAX-D encoder uses (rename-proof).
+    let likely: Bool
 }
 
 /// One line in the session transcript.
@@ -31,6 +34,12 @@ final class BLEManager: NSObject, ObservableObject {
     @Published var loggedIn = false
     @Published var log: [LogLine] = []
     @Published var autoLogin = true
+
+    /// Show every device, not just likely encoders.
+    @Published var showAll = false { didSet { publishDevices() } }
+    /// True when the filter found nothing, so all devices are shown as a fallback.
+    @Published var showingAllFallback = false
+    private var allDevices: [DiscoveredDevice] = []
 
     private var central: CBCentralManager!
     private var peripheral: CBPeripheral?
@@ -71,6 +80,8 @@ final class BLEManager: NSObject, ObservableObject {
     func startScan() {
         guard central.state == .poweredOn else { return }
         devices.removeAll()
+        allDevices.removeAll()
+        showingAllFallback = false
         phase = .scanning
         // Encoder doesn't advertise its service UUID, so scan for everything and
         // let the user pick. Duplicates are OFF so the list doesn't churn on
@@ -281,24 +292,40 @@ extension BLEManager: CBCentralManagerDelegate {
                         advertisementData: [String: Any], rssi RSSI: NSNumber) {
         let name = (advertisementData[CBAdvertisementDataLocalNameKey] as? String)
             ?? peripheral.name ?? "(unknown)"
+        // Encoder = named device with no manufacturer data and no advertised
+        // service UUID (bare RN4870). Rename-proof, unlike a "Shire" name prefix.
+        let hasMfg = advertisementData[CBAdvertisementDataManufacturerDataKey] != nil
+        let svc = advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID]
+        let hasSvc = !(svc?.isEmpty ?? true)
+        let likely = name != "(unknown)" && !hasMfg && !hasSvc
+
         let dev = DiscoveredDevice(id: peripheral.identifier, name: name,
-                                   rssi: RSSI.intValue, peripheral: peripheral)
-        if let i = devices.firstIndex(where: { $0.id == dev.id }) {
-            devices[i].rssi = dev.rssi   // refresh signal in place, no reorder
-            return
+                                   rssi: RSSI.intValue, peripheral: peripheral, likely: likely)
+        if let i = allDevices.firstIndex(where: { $0.id == dev.id }) {
+            allDevices[i].rssi = dev.rssi   // refresh signal in place
+        } else {
+            allDevices.append(dev)
         }
-        devices.append(dev)
-        // Stable order so rows don't jump while you're trying to tap one:
-        // likely encoder first, then named devices before "(unknown)", then
-        // alphabetical. Deliberately NOT sorted by RSSI (it jitters constantly).
-        devices.sort {
-            let aHint = $0.name == Encoder.nameHint, bHint = $1.name == Encoder.nameHint
-            if aHint != bHint { return aHint }
+        // Stable order: likely encoders first, then named before "(unknown)",
+        // then alphabetical. Deliberately NOT sorted by RSSI (it jitters).
+        allDevices.sort {
+            if $0.likely != $1.likely { return $0.likely }
             let aNamed = $0.name != "(unknown)", bNamed = $1.name != "(unknown)"
             if aNamed != bNamed { return aNamed }
             if $0.name != $1.name { return $0.name < $1.name }
             return $0.id.uuidString < $1.id.uuidString
         }
+        publishDevices()
+    }
+
+    /// Publish the filtered device list: likely encoders only, unless the user
+    /// chose "show all" or there are no likely matches (fallback so a future
+    /// firmware that adds a manufacturer ID still shows up).
+    private func publishDevices() {
+        let likelyOnly = allDevices.filter { $0.likely }
+        let fallback = likelyOnly.isEmpty && !allDevices.isEmpty
+        devices = (showAll || likelyOnly.isEmpty) ? allDevices : likelyOnly
+        showingAllFallback = fallback && !showAll
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
