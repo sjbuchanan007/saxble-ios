@@ -433,7 +433,10 @@ class BleManager(private val context: Context) {
 
     fun transcript(): String {
         val df = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.UK)
-        return log.value.joinToString("\n") { "${df.format(Date(it.time))}  ${it.text}" }
+        // Exclude the scan ADV dumps — they're diagnostics, not commissioning.
+        return log.value
+            .filter { !it.text.startsWith("ADV ") }
+            .joinToString("\n") { "${df.format(Date(it.time))}  ${it.text}" }
     }
 
     fun reportRxLines(): List<String> = log.value.filter { it.rx }.map { it.text }
