@@ -4,10 +4,18 @@ import SwiftUI
 /// Location name; a likely match is floated to the top).
 struct ScanView: View {
     @EnvironmentObject var ble: BLEManager
+    @State private var manualPassword = ""
 
     var body: some View {
         NavigationStack {
             ScrollView {
+                if !ble.status.isEmpty {
+                    Text(ble.status)
+                        .font(.subheadline).fontWeight(.medium)
+                        .foregroundStyle(Color.shjBlue)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16).padding(.top, 8)
+                }
                 if !ble.devices.isEmpty {
                     VStack(spacing: 6) {
                         HStack {
@@ -40,6 +48,13 @@ struct ScanView: View {
                 Button { ble.startScan() } label: { Image(systemName: "arrow.clockwise") }
             }
             .brandNavBar()
+            .alert("Encoder password", isPresented: $ble.needsPassword) {
+                TextField("password", text: $manualPassword)
+                Button("Log in") { ble.submitPassword(manualPassword); manualPassword = "" }
+                Button("Disconnect", role: .cancel) { ble.disconnect(); manualPassword = "" }
+            } message: {
+                Text("The default passwords didn't work. Enter this encoder's password.")
+            }
             .overlay {
                 if ble.devices.isEmpty {
                     ContentUnavailableView("Scanning…",

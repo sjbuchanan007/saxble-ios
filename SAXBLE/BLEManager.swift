@@ -41,6 +41,12 @@ final class BLEManager: NSObject, ObservableObject {
     @Published var showingAllFallback = false
     private var allDevices: [DiscoveredDevice] = []
 
+    /// Human feedback for the landing screen (Connecting… / Logging in… / etc.).
+    @Published var status = ""
+    /// True when the default passwords failed and we need the user to type one.
+    @Published var needsPassword = false
+    private var lastAttempted: String?
+
     private var central: CBCentralManager!
     private var peripheral: CBPeripheral?
     private var writeChar: CBCharacteristic?
@@ -92,9 +98,20 @@ final class BLEManager: NSObject, ObservableObject {
     func connect(_ device: DiscoveredDevice) {
         central.stopScan()
         phase = .connecting
+        loggedIn = false
+        needsPassword = false
+        status = "Connecting to \(device.name)…"
         peripheral = device.peripheral
         peripheral?.delegate = self
         central.connect(device.peripheral, options: nil)
+    }
+
+    /// The user typed a password after the defaults failed.
+    func submitPassword(_ pw: String) {
+        needsPassword = false
+        lastAttempted = pw
+        status = "Logging in…"
+        sendSlow(pw)
     }
 
     func disconnect() {
@@ -212,7 +229,13 @@ final class BLEManager: NSObject, ObservableObject {
             }
             return
         }
-        if line.contains(Encoder.loginMarker) { loggedIn = true; Haptics.success(); return }
+        if line.contains(Encoder.loginMarker) {
+            loggedIn = true
+            needsPassword = false
+            status = "Logged in"
+            Haptics.success()
+            return
+        }
 
         // Verify a just-changed password against the encoder's settings echo.
         if verifyingPassword, let want = expectedPassword,
@@ -256,8 +279,15 @@ final class BLEManager: NSObject, ObservableObject {
         guard isPrompt || isInvalid else { return }
 
         loggedIn = false
-        guard autoLogin, loginIndex < loginCandidates.count else { return }
+        guard autoLogin, loginIndex < loginCandidates.count else {
+            // Defaults exhausted — ask the user for this unit's password.
+            needsPassword = true
+            status = "Enter the encoder password"
+            return
+        }
         let pw = loginCandidates[loginIndex]; loginIndex += 1
+        lastAttempted = pw
+        status = "Logging in…"
         // Settle, then send the password char-by-char.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
             self?.sendSlow(pw)
@@ -341,6 +371,8 @@ extension BLEManager: CBCentralManagerDelegate {
                         error: Error?) {
         writeChar = nil
         loggedIn = false
+        needsPassword = false
+        status = ""
         phase = .scanning
         info("disconnected")
         startScan()
@@ -379,6 +411,7 @@ extension BLEManager: CBPeripheralDelegate {
         }
         if writeChar != nil, phase != .connected {
             phase = .connected
+            status = "Logging in…"
             info("ready (rx subscribed)")
         }
     }
