@@ -26,6 +26,7 @@ object Encoder {
      *  byte at a time with this gap. Re-tune on real Android hardware. */
     const val SLOW_BYTE_GAP_MS = 35L
 
-    /** Tried in order on each password prompt (will become a stored list later). */
-    val passwordCandidates = listOf("MMSmms659", "studio3")
+    /** Tried in order on each password prompt (will become a stored list later).
+     *  The single-dash variant hedges the drop-last-character bug on the new one. */
+    val passwordCandidates = listOf("SHJshj2026--", "SHJshj2026-", "MMSmms659", "studio3")
 }

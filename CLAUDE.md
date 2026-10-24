@@ -34,7 +34,9 @@ ports that proven behaviour to SwiftUI + CoreBluetooth.
   updated successfully` confirms.
 - Prompts (`Password:`, `Y or N`, `>`) have **no trailing newline**, so the line
   assembler also flushes when the buffer ends in `: > ? #`.
-- Known passwords: `MMSmms659` (current), `studio3` (documented default).
+- Known passwords: `SHJshj2026--` (new SHJ standard, set by presets),
+  `MMSmms659` (previous), `studio3` (documented default). Auto-login tries these
+  in order; a `SHJshj2026-` variant is included to survive a dropped last char.
 
 ## Architecture
 - `BLEManager` (ObservableObject) = the whole transport + login/confirm/retype
