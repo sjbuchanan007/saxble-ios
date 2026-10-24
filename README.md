@@ -90,6 +90,9 @@ If no such image is present the report simply omits the logo — no error.
 Use a transparent-background PNG (it's drawn on white). The report headings use
 the SHJ brand blue to match.
 
+**Android** uses the same idea: drop the logo as `app/src/main/res/drawable/shj_logo.png`
+and the Android report draws it on page 1 (omitted if absent).
+
 ## App icon
 `SAXBLE/Assets.xcassets/AppIcon.appiconset` ships a brand-coloured placeholder
 icon (teal→green gauge). XcodeGen wires it up via

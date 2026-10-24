@@ -2,7 +2,10 @@ package com.shj.saxble
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.text.Layout
@@ -194,23 +197,36 @@ object Report {
             .setAlignment(Layout.Alignment.ALIGN_NORMAL)
             .build()
 
+        val logo = loadLogo(context)
         val doc = PdfDocument()
         var startLine = 0
         var pageNum = 1
         val totalLines = layout.lineCount
         while (startLine < totalLines) {
-            val startY = layout.getLineTop(startLine)
-            var endLine = startLine
-            while (endLine < totalLines && layout.getLineBottom(endLine) - startY <= contentH) endLine++
-            if (endLine == startLine) endLine = startLine + 1   // never stall
-
             val info = PdfDocument.PageInfo.Builder(pageW, pageH, pageNum).create()
             val page = doc.startPage(info)
             val c = page.canvas
             c.drawColor(Color.WHITE)
+
+            // Letterhead logo on page 1 (if an "shj_logo" drawable exists).
+            var topInset = 0f
+            if (pageNum == 1 && logo != null) {
+                val logoW = minOf(contentW.toFloat(), 240f)
+                val scale = logoW / logo.width
+                val logoH = logo.height * scale
+                c.drawBitmap(logo, null, RectF(margin.toFloat(), margin.toFloat(), margin + logoW, margin + logoH), null)
+                topInset = logoH + 16f
+            }
+
+            val avail = contentH - topInset
+            val startY = layout.getLineTop(startLine)
+            var endLine = startLine
+            while (endLine < totalLines && layout.getLineBottom(endLine) - startY <= avail) endLine++
+            if (endLine == startLine) endLine = startLine + 1   // never stall
+
             c.save()
-            c.translate(margin.toFloat(), (margin - startY).toFloat())
-            c.clipRect(0, startY, contentW, layout.getLineBottom(endLine - 1))
+            c.translate(margin.toFloat(), margin + topInset - startY)
+            c.clipRect(0f, startY.toFloat(), contentW.toFloat(), layout.getLineBottom(endLine - 1).toFloat())
             layout.draw(c)
             c.restore()
             doc.finishPage(page)
@@ -309,4 +325,11 @@ object Report {
     private fun slug(s: String): String =
         s.map { if (it.isLetterOrDigit()) it else '-' }.joinToString("")
             .split("-").filter { it.isNotEmpty() }.joinToString("-").ifEmpty { "encoder" }
+
+    /** Load an "shj_logo" drawable for the letterhead, or null if not present. */
+    private fun loadLogo(context: Context): Bitmap? {
+        val id = context.resources.getIdentifier("shj_logo", "drawable", context.packageName)
+        if (id == 0) return null
+        return try { BitmapFactory.decodeResource(context.resources, id) } catch (e: Exception) { null }
+    }
 }

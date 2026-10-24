@@ -97,6 +97,7 @@ private fun CommandGrid(ble: BleManager, category: CommandCategory) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CommandDialog(ble: BleManager, cmd: CommandDef, onClose: () -> Unit) {
     var channel by remember { mutableStateOf("1") }
@@ -138,14 +139,13 @@ private fun CommandDialog(ble: BleManager, cmd: CommandDef, onClose: () -> Unit)
                 }
                 if (cmd.needsChannel) {
                     Text("Channel", fontSize = 12.sp)
-                    Row(Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         SAXCommands.channels.forEach { c ->
-                            val lbl = if (c == "a") "All" else c
-                            if (channel == c)
-                                Button(onClick = { channel = c }, contentPadding = PaddingValues(horizontal = 10.dp)) { Text(lbl) }
-                            else
-                                OutlinedButton(onClick = { channel = c }, contentPadding = PaddingValues(horizontal = 10.dp)) { Text(lbl) }
+                            FilterChip(
+                                selected = channel == c,
+                                onClick = { channel = c },
+                                label = { Text(if (c == "a") "All" else c) },
+                            )
                         }
                     }
                     Spacer(Modifier.height(8.dp))
