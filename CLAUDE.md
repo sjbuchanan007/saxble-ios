@@ -12,12 +12,21 @@ Specialists** (blue `#00A0DC` + gray).
 - **Never leave finished work on a side branch.** When a piece of work is done,
   open a **pull request against `main`** and tell the user, so they can review
   and merge on GitHub. Base all work on `main`.
-- **Keep Android in the loop.** For any *significant* change — a new feature, a
-  change to how the app talks to the SAX-D over Bluetooth, a change to screens /
-  user flow, or a bug fix in shared logic — add a dated entry to
-  **`ANDROID-PARITY.md`** (what changed, why, what Android needs to match) and
+- **Keep Android in the loop (iOS → Android).** For any *significant* change — a
+  new feature, a change to how the app talks to the SAX-D over Bluetooth, a
+  change to screens / user flow, or a bug fix in shared logic — add a dated entry
+  to **`ANDROID-PARITY.md`** (what changed, why, what Android needs to match) and
   repeat that summary in a **"For Android"** section of the PR description. Skip
   this for iOS-only changes (Xcode/Apple-specific fixes, SwiftUI-only tweaks).
+- **Check Android → iOS parity at the start of each session.** `saxd-android`
+  keeps an `IOS-PARITY.md` listing significant Android changes iOS may need to
+  match. At session start, read it (`add_repo` sjbuchanan007/saxd-android, then
+  `gh api repos/sjbuchanan007/saxd-android/contents/IOS-PARITY.md`), compare
+  against the marker below, **tell the user what's outstanding**, and update the
+  marker once entries are handled (or consciously deferred).
+
+  **Last processed Android → iOS parity entry:** _none — `saxd-android` had no
+  `IOS-PARITY.md` as of 2026-11-02._
 
 ## The encoder (hard-won facts — do not "simplify" these away)
 - BLE peripheral exposing a **Microchip/ISSC "transparent UART"** service (NOT
