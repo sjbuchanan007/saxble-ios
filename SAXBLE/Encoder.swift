@@ -14,8 +14,9 @@ enum Encoder {
     /// CR-only gets no reply).
     static let lineEnding = "\r\n"
 
-    /// Tried in order on each "Password:" prompt until one logs in.
-    static let passwordCandidates = ["MMSmms659", "studio3"]
+    /// Tried in order on each "Password:" prompt until one logs in. The single-
+    /// dash variant hedges the drop-last-character bug on the new password.
+    static let passwordCandidates = ["SHJshj2026--", "SHJshj2026-", "MMSmms659", "studio3"]
 
     /// Substring of the post-login banner ("Welcome to Shire SAX Command Line
     /// Interface"). Kept short to tolerate wording differences.
@@ -29,4 +30,9 @@ enum Encoder {
     /// A single bulk write drops the last password character on this encoder, so
     /// the password is sent one byte at a time with this gap (mimics typing).
     static let slowByteGap: TimeInterval = 0.035
+
+    /// Extra pause after the last content byte, before the CR+LF, on paced
+    /// sends. The encoder tends to drop the final character if the terminator
+    /// treads on its heels — this gives it time to commit.
+    static let slowTerminatorGap: TimeInterval = 0.12
 }

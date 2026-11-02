@@ -15,7 +15,10 @@ struct RootView: View {
     @EnvironmentObject var ble: BLEManager
 
     var body: some View {
-        if ble.phase == .connected {
+        // Only show the commands once actually logged in (AUTH), not merely
+        // connected — otherwise we'd land on commands while still at the password
+        // prompt. The scan screen handles connecting + the password prompt.
+        if ble.loggedIn {
             ConnectedView()
         } else {
             ScanView()

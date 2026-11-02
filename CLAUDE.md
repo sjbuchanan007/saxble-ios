@@ -12,11 +12,21 @@ ports that proven behaviour to SwiftUI + CoreBluetooth.
   write to the writable one.
 - **It does NOT advertise its service UUID** — scan for everything and match by
   the advertised name (the encoder's *Location* string, e.g. `mmssjbt1`).
+  Verified on hardware: the advert carries **only the Location name** — no
+  service UUID and **no manufacturer data**. So there is no constant "Shire"
+  marker, and the name is fully renamable. The scan therefore filters to
+  "**named device + no manufacturer data + no service UUID**" (the bare RN4870
+  signature — rename-proof), floats those to the top, and falls back to showing
+  **all** devices if none match (future firmware might add a manufacturer ID).
+  A `Show all` toggle overrides the filter.
 - **Line ending must be CR+LF (`\r\n`)**. LF-only is rejected; CR-only gets no
   reply. (Cosmetic double prompts `> >` are normal with CRLF.)
 - **Password is rate-sensitive**: a single bulk write drops the last character.
   Send the password — and any `password <new>` command — **one byte at a time**
-  (~35 ms apart). See `BLEManager.sendSlow` / `send`.
+  (~35 ms apart). See `BLEManager.sendSlow` / `send`. Pacing fixes login, but the
+  `password <new>` set can *still* silently drop the last char, so after a change
+  the app reads `settings` back and warns if the stored value differs from what
+  was sent (`verifyingPassword` / `passwordWarning`).
 - Request/response CLI; the encoder does not push data unsolicited.
 - Login success banner contains **`Welcome to Shire`** → set logged-in / AUTH.
 - Destructive commands prompt **`Y or N`** → answer `Y`. Changing the password
@@ -24,15 +34,20 @@ ports that proven behaviour to SwiftUI + CoreBluetooth.
   updated successfully` confirms.
 - Prompts (`Password:`, `Y or N`, `>`) have **no trailing newline**, so the line
   assembler also flushes when the buffer ends in `: > ? #`.
-- Known passwords: `MMSmms659` (current), `studio3` (documented default).
+- Known passwords: `SHJshj2026--` (new SHJ standard, set by presets),
+  `MMSmms659` (previous), `studio3` (documented default). Auto-login tries these
+  in order; a `SHJshj2026-` variant is included to survive a dropped last char.
 
 ## Architecture
 - `BLEManager` (ObservableObject) = the whole transport + login/confirm/retype
   logic, mirroring the firmware's `ble_uart.cpp` + `main.cpp`.
 - `Commands.swift` / `Presets.swift` are ported 1:1 from the firmware's
   `commands.cpp` / `presets.cpp`. Keep them in sync if the firmware changes.
-- UI is plain SwiftUI: `ScanView` → `ConnectedView` (Commands / Presets /
-  Console tabs).
+- `Report.swift` parses the encoder's `gas a list` / `settings` replies into a
+  structured **PDF commissioning report** (letterhead logo + gas table with
+  alarm differentials + system settings, then the full transcript appended).
+- UI is plain SwiftUI: `ScanView` → `ConnectedView`, a TabView of **Gas /
+  General** (2-column command-card grids) / **Presets** / **Console**.
 
 ## Build / constraints
 - SwiftUI + CoreBluetooth, deployment target **iOS 17** (uses `ShareLink`,
@@ -42,8 +57,14 @@ ports that proven behaviour to SwiftUI + CoreBluetooth.
 - The dev container can't build/run iOS — flash to an iPhone and iterate from
   the serial-equivalent (the in-app Console + Xcode console).
 
+## Done
+- **PDF commissioning report** export (`Report.swift`): structured summary
+  (logo + gas/alarm table + settings) plus appended transcript, named by
+  location + date. Add an `shj-logo` image to brand the header. App is themed
+  in the SHJ brand colours (blue `#00A0DC` + gray).
+
 ## Not done yet / ideas
+See `ROADMAP.md` for detailed requirements on the first two.
 - Persist a password list + last-used (currently hard-coded candidates).
 - Per-device session history / saved reports (currently share-on-demand).
 - Editable presets in-app.
-- PDF commissioning report export (currently plain-text Share).
